@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.firebase/
+.env
+.env.local
+*.log
+ORIGINAL-ADMIN-BACKUP.js
+ADMIN-FIREBASE-CACHE-BACKUP.js

@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /applications/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /placements/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /employer_inquiries/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /documents/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /candidates/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /users/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /training_sessions/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /certificates/{certId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+    match /trainingLeads/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    match /photographerApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    match /fastTrackApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    match /retailSalesApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    match /candidateDocuments/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    match /settings/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

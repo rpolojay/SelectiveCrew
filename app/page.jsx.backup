@@ -1,0 +1,388 @@
+'use client';
+import Link from 'next/link';
+import { useLang } from '../lib/LanguageContext';
+import { t } from '../lib/translations';
+
+const STATS = [
+  { key: 'stat_candidates', value: '2,000+' },
+  { key: 'stat_partners', value: '2' },
+  { key: 'stat_countries', value: '10' },
+  { key: 'stat_positions', value: '6' },
+];
+
+const COUNTRIES = [
+  'Colombia', 'Chile', 'Argentina', 'Peru',
+  'Ecuador', 'Panama', 'Costa Rica', 'Venezuela',
+  'Uruguay', 'Dominican Republic',
+];
+
+const FEATURED_JOBS = [
+  {
+    title_en: 'Fast Track Assistant Manager',
+    title_es: 'Fast Track Asistente de Gerente',
+    company: 'Starboard Cruise Services',
+    category_en: 'HOT JOB',
+    category_es: 'EMPLEO CALIENTE',
+    location: 'Worldwide',
+    hot: true,
+    spotsLeft: 13,
+    applyLink: '/fast-track-manager',
+  },
+  {
+    title_en: 'Duty Free Sales Associate',
+    title_es: 'Asociado de Ventas Duty Free',
+    company: 'Starboard Cruise Services',
+    category_en: 'JAPANESE SPEAKERS',
+    category_es: 'HABLANTES DE JAPONES',
+    location: 'Asia / Pacific',
+    hot: true,
+    hotColor: '#BC002D',
+    spotsLeft: 12,
+    applyLink: '/japanese-speakers',
+    logo: 'https://res.cloudinary.com/dr9xpsjmb/image/upload/v1767023146/SC_Enhanced_ssyr8a.jpg',
+    logo: 'https://res.cloudinary.com/dr9xpsjmb/image/upload/v1767023146/SC_Enhanced_ssyr8a.jpg',
+  },
+  {
+    title_en: 'Retail Sales Associate',
+    title_es: 'Asociado de Ventas al por Menor',
+    company: 'Starboard Cruise Services',
+    category_en: 'Retail',
+    category_es: 'Ventas',
+    location: 'Worldwide',
+    applyLink: '/apply',
+    logo: 'https://res.cloudinary.com/dr9xpsjmb/image/upload/v1767023146/SC_Enhanced_ssyr8a.jpg',
+  },
+  {
+    title_en: 'Photographer',
+    title_es: 'Fotografo',
+    company: 'Norwegian Cruise Line',
+    category_en: 'Photography',
+    category_es: 'Fotografia',
+    location: 'Worldwide',
+    applyLink: '/apply-photographer',
+    logo: 'https://res.cloudinary.com/dr9xpsjmb/image/upload/v1767023146/SC_Enhanced_ssyr8a.jpg',
+  },
+  {
+    title_en: 'Assistant Retail Sales Manager',
+    title_es: 'Asistente de Gerente de Ventas',
+    company: 'Starboard Cruise Services',
+    category_en: 'Retail',
+    category_es: 'Ventas',
+    location: 'Worldwide',
+    applyLink: '/apply',
+    logo: 'https://res.cloudinary.com/dr9xpsjmb/image/upload/v1767023146/SC_Enhanced_ssyr8a.jpg',
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    name: 'Ruben De Jesus Hernandez',
+    role: 'Starboard Cruise Services Sales Associate',
+    avatar: 'https://faithful-orange-dfimzrrnwd.edgeone.app/rubendejesushernandez.png',
+    quote_en: 'Thanks to Selective Crew I am now working on a cruise ship. The agency is very professional and the staff is very friendly and helpful. He was placed within 3 weeks.',
+    quote_es: 'Gracias a Selective Crew ahora estoy trabajando en un crucero. La agencia es muy profesional y el personal es muy amable y servicial. Fue colocado en 3 semanas.',
+  },
+  {
+    name: 'Shalom Coba',
+    role: 'Harding Retail Sales Associate',
+    avatar: 'https://remarkable-fuchsia-ausorrtqqo.edgeone.app/shalom.coba_.png',
+    quote_en: 'Selective Crew helped me get a job on a cruise ship and now I am traveling the world. I recommend them 100%. She was placed within a month of applying.',
+    quote_es: 'Selective Crew me ayudo a conseguir trabajo en un crucero y ahora estoy viajando por el mundo. Los recomiendo 100%. Fue colocada en un mes de haber aplicado.',
+  },
+  {
+    name: 'Evelin Hidalgo',
+    role: 'Retail Supervisor, Starboard',
+    avatar: 'https://beautiful-lavender-wsslydh03d.edgeone.app/heriito.hidalgo.png',
+    quote_en: 'Selective Crew is the best agency to get a job on a cruise ship. They are very professional and help you throughout the process. She went from applicant to Retail Supervisor within her first year.',
+    quote_es: 'Selective Crew es la mejor agencia para conseguir trabajo en un crucero. Son muy profesionales y te ayudan durante todo el proceso. Paso de candidata a Supervisora en su primer ano.',
+  },
+];
+
+const BLOG_POSTS = [
+  {
+    title_en: 'The Ultimate Cruise Ship Packing List for Crew (2026 Edition)',
+    title_es: 'La Lista Definitiva de Equipaje para Tripulacion de Cruceros (Edicion 2026)',
+    slug: 'packing-list',
+    excerpt_en: 'What to bring, what to leave behind, and how to fit your life into one suitcase for your six-month adventure at sea.',
+    excerpt_es: 'Que llevar, que dejar atras y como caber tu vida en una maleta para tu aventura de seis meses en el mar.',
+    image: 'https://enthusiastic-beige-gu1eaf4v8j-g2d3hpdfee.edgeone.app/The%20Ultimate%20Cruise%20Ship%20Packing%20List%20for%20Crew%202026.png',
+  },
+  {
+    title_en: 'A Day in the Life of a Cruise Ship Chef',
+    title_es: 'Un Dia en la Vida de un Chef de Crucero',
+    slug: 'day-in-the-life-chef',
+    excerpt_en: "Ever wondered what it's like to cook for thousands of guests on the open ocean?",
+    excerpt_es: 'Alguna vez te preguntaste como es cocinar para miles de huespedes en el oceano abierto?',
+    image: 'https://firebasestorage.googleapis.com/v0/b/studio-6715036493-baccc.firebasestorage.app/o/A%20Day%20in%20the%20Life%20of%20a%20Cruise%20Ship%20Chef.webp?alt=media&token=f81c6b70-05c3-4bd4-8fa4-9768e37e27ae',
+  },
+  {
+    title_en: 'Cruise Ship Salaries 2026: Real Paychecks Revealed',
+    title_es: 'Salarios en Cruceros 2026: Cheques Reales Revelados',
+    slug: 'salaries-2026',
+    excerpt_en: "The biggest secret in the maritime industry is that the advertised salary is almost never what you actually take home.",
+    excerpt_es: 'El mayor secreto de la industria maritima es que el salario anunciado casi nunca es lo que realmente te llevas a casa.',
+    image: 'https://cooing-fuchsia-u3s0ifvlw1-mhiwbg5mbt.edgeone.app/cruise-ship-salary-2025.jpg.png',
+  },
+];
+
+export default function HomePage() {
+  const { lang } = useLang();
+  const tx = t[lang];
+  const es = lang === 'es';
+
+  const FAQS = [
+    { q: tx.faq_q1, a: tx.faq_a1 },
+    { q: tx.faq_q2, a: tx.faq_a2 },
+    { q: tx.faq_q3, a: tx.faq_a3 },
+    { q: tx.faq_q4, a: tx.faq_a4 },
+    { q: tx.faq_q5, a: tx.faq_a5 },
+    { q: tx.faq_q6, a: tx.faq_a6 },
+    { q: tx.faq_q7, a: tx.faq_a7 },
+  ];
+
+  return (
+    <div className="bg-white">
+
+      {/* Urgency Banner */}
+      <div style={{ background: "linear-gradient(90deg, #e85d4a, #f0a500)", padding: "12px 16px", textAlign: "center" }}>
+        <p style={{ color: "#fff", fontSize: 14, fontWeight: 700, margin: 0 }}>
+          {es ? 'Actualmente estamos entrevistando para salidas de Mayo/Junio — Plazas limitadas!' : 'We are currently interviewing for May/June departures — Limited spots available!'}
+          {' '}<a href="/apply" style={{ color: "#fff", textDecoration: "underline", fontWeight: 800 }}>{es ? 'Aplica Ahora →' : 'Apply Now →'}</a>
+        </p>
+      </div>
+
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-navy via-navy-light to-ocean text-white py-24 px-4">
+        <div className="container-main text-center">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">{tx.hero_title}</h1>
+          <p className="text-xl text-blue-200 mb-10 max-w-2xl mx-auto">{tx.hero_subtitle}</p>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(240,165,0,0.15)", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 50, padding: "10px 24px", marginBottom: 32 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#f0a500" }}>Earn $900–$1,500/month + commissions</span>
+          </div>
+          <br />
+          <Link href="/jobs" className="btn-gold text-lg py-4 px-10 inline-block rounded-xl">{tx.hero_cta}</Link>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 max-w-3xl mx-auto">
+            {STATS.map((stat) => (
+              <div key={stat.key} className="text-center">
+                <div className="text-4xl font-bold text-gold mb-1">{stat.value}</div>
+                <div className="text-sm text-blue-200">{tx[stat.key]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Legit */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="container-main">
+          <h2 className="text-3xl font-bold text-center mb-4">{tx.legit_title}</h2>
+          <p className="text-center text-gray-600 mb-10">{tx.legit_subtitle}</p>
+          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
+            {[tx.legit_1, tx.legit_2, tx.legit_3].map((item) => (
+              <div key={item} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-start gap-3">
+                <span className="text-green-500 font-bold text-lg">✓</span>
+                <p className="text-sm text-gray-700">{item}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-xl p-6 max-w-3xl mx-auto border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-navy mb-2">{tx.legit_note_title}</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">{tx.legit_note}</p>
+          </div>
+          <div className="text-center mt-8">
+            <Link href="/jobs" className="btn-primary inline-block">{tx.legit_cta}</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Geographic Focus */}
+      <section className="py-16 px-4">
+        <div className="container-main">
+          <h2 className="text-3xl font-bold text-center mb-4">{tx.geo_title}</h2>
+          <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">{tx.geo_subtitle}</p>
+          <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+            {COUNTRIES.map((country) => (
+              <span key={country} className="bg-gray-100 rounded-full px-4 py-2 text-sm font-medium">{country}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Jobs */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="container-main">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl font-bold">{tx.featured_title}</h2>
+            <Link href="/jobs" className="text-ocean hover:underline text-sm font-medium">{tx.featured_view_all}</Link>
+          </div>
+          <div className="grid md:grid-cols-4 gap-6">
+            {FEATURED_JOBS.map((job) => (
+              job.hot ? (
+                // HOT JOB CARD
+                <div key={job.title_en} style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a0a0a 100%)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(232,52,26,0.25)", border: "1px solid rgba(232,52,26,0.3)", position: "relative" }}>
+                  {/* Hot badge */}
+                  <div style={{ background: job.hotColor || "#e8341a", padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", letterSpacing: 1.5, textTransform: "uppercase" }}>
+                      {es ? "Empleo Caliente" : "Hot Job"}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                      {es ? `${job.spotsLeft} cupos` : `${job.spotsLeft} spots left`}
+                    </span>
+                  </div>
+                  <div style={{ padding: "20px 20px 24px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                      <img src={job.logo} alt={job.company} style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(240,165,0,0.2)", color: "#f0a500", padding: "3px 8px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase" }}>
+                        {es ? job.category_es : job.category_en}
+                      </span>
+                    </div>
+                    <h3 style={{ fontWeight: 800, color: "#fff", marginBottom: 4, fontSize: 15, lineHeight: 1.3 }}>{es ? job.title_es : job.title_en}</h3>
+                    <p style={{ fontSize: 12, color: "#8fb8e8", marginBottom: 4 }}>{job.company}</p>
+                    <p style={{ fontSize: 11, color: "#6a8aaa", marginBottom: 16 }}>{job.location}</p>
+                    <div style={{ background: "rgba(232,52,26,0.12)", border: "1px solid rgba(232,52,26,0.25)", borderRadius: 8, padding: "8px 10px", marginBottom: 16 }}>
+                      <p style={{ fontSize: 11, color: "#ffb3c0", fontWeight: 600, lineHeight: 1.5 }}>
+                        {job.category_en === "JAPANESE SPEAKERS" ? (es ? "Se requiere japones conversacional a fluido" : "Conversational to fluent Japanese required") : (es ? "Requiere liderazgo de equipos de 10+ personas" : "Requires team leadership of 10+ people")}
+                      </p>
+                    </div>
+                    <Link href={job.applyLink} style={{ display: "block", background: job.hotColor || "#e8341a", color: "#fff", borderRadius: 10, padding: "11px", fontSize: 13, fontWeight: 800, textDecoration: "none", textAlign: "center" }}>
+                      {es ? "Ver Posicion →" : "View Position →"}
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                // REGULAR JOB CARD
+                <div key={job.title_en} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <img src={job.logo} alt={job.company} className="w-12 h-12 rounded-lg object-cover" />
+                    <span className="text-xs bg-gold/20 text-gold font-medium px-2 py-1 rounded">{tx.featured_label}</span>
+                  </div>
+                  <h3 className="font-bold text-navy mb-1">{es ? job.title_es : job.title_en}</h3>
+                  <p className="text-sm text-gray-500 mb-1">{job.company}</p>
+                  <p className="text-xs text-gray-400 mb-4">{es ? job.category_es : job.category_en} · {job.location}</p>
+                  <Link href={job.applyLink} className="btn-primary text-sm py-2 inline-block w-full text-center">
+                    {tx.featured_apply}
+                  </Link>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-16 px-4">
+        <div className="container-main">
+          <h2 className="text-3xl font-bold text-center mb-4">{tx.how_title}</h2>
+          <p className="text-center text-gray-500 mb-12">{tx.how_subtitle}</p>
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              { step: '1', title: tx.how_1_title, desc: tx.how_1_desc },
+              { step: '2', title: tx.how_2_title, desc: tx.how_2_desc },
+              { step: '3', title: tx.how_3_title, desc: tx.how_3_desc },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="w-14 h-14 bg-ocean text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">{item.step}</div>
+                <h3 className="font-bold text-lg mb-2">{item.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <Link href="/apply" className="btn-gold inline-block">{tx.how_cta}</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-16 px-4 bg-navy text-white">
+        <div className="container-main">
+          <h2 className="text-3xl font-bold text-center mb-4">{tx.testimonials_title}</h2>
+          <p className="text-center text-blue-200 mb-12">{tx.testimonials_subtitle}</p>
+          <div className="grid md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((t) => (
+              <div key={t.name} className="bg-navy-light rounded-xl p-6 border border-gray-700">
+                <div className="flex items-center gap-3 mb-4">
+                  <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full object-cover" />
+                  <div>
+                    <p className="font-semibold text-sm">{t.name}</p>
+                    <p className="text-xs text-blue-300">{t.role}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300 leading-relaxed italic">"{es ? t.quote_es : t.quote_en}"</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <a href="https://www.facebook.com/selectivecrew/reviews" target="_blank" rel="noopener noreferrer" className="btn-gold inline-block">{tx.testimonials_cta}</a>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-16 px-4">
+        <div className="container-main max-w-3xl">
+          <h2 className="text-3xl font-bold text-center mb-12">{tx.faq_title}</h2>
+          <div className="space-y-4">
+            {FAQS.map((faq) => (
+              <details key={faq.q} className="border border-gray-200 rounded-xl p-5 group">
+                <summary className="font-medium cursor-pointer flex justify-between items-center">
+                  {faq.q}
+                  <span className="text-ocean group-open:rotate-45 transition-transform">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-gray-600 leading-relaxed">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+          <p className="text-center mt-8 text-sm text-gray-500">
+            {tx.faq_contact}{' '}
+            <Link href="/contact" className="text-ocean hover:underline">{tx.faq_contact_link}</Link>
+          </p>
+        </div>
+      </section>
+
+      {/* Blog */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="container-main">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl font-bold">{tx.blog_title}</h2>
+            <Link href="/blog" className="text-ocean hover:underline text-sm font-medium">{tx.blog_cta}</Link>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {BLOG_POSTS.map((post) => (
+              <Link key={post.slug} href="/blog" className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                <img src={post.image} alt={post.title_en} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="p-5">
+                  <h3 className="font-bold text-navy mb-2 leading-snug">{es ? post.title_es : post.title_en}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{es ? post.excerpt_es : post.excerpt_en}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Talent Pool */}
+      <section className="py-16 px-4 bg-ocean text-white">
+        <div className="container-main text-center">
+          <h2 className="text-3xl font-bold mb-4">{tx.talent_title}</h2>
+          <p className="text-blue-100 mb-8 max-w-xl mx-auto">{tx.talent_subtitle}</p>
+          <Link href="/talent-pool" className="btn-gold inline-block text-lg py-4 px-10">{tx.talent_cta}</Link>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-16 px-4 bg-navy text-white">
+        <div className="container-main text-center">
+          <h2 className="text-3xl font-bold mb-4">{tx.final_title}</h2>
+          <p className="text-blue-200 mb-8">{tx.final_subtitle}</p>
+          <div className="flex flex-col md:flex-row justify-center gap-4 mb-10 text-sm text-blue-200">
+            <span>✅ {tx.final_1}</span>
+            <span>✅ {tx.final_2}</span>
+            <span>✅ {tx.final_3}</span>
+          </div>
+          <Link href="/jobs" className="btn-gold inline-block text-lg py-4 px-10">{tx.final_cta}</Link>
+        </div>
+      </section>
+    </div>
+  );
+}

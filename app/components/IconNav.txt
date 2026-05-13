@@ -1,0 +1,52 @@
+﻿<div style={{
+  background: "#1a472a",
+  padding: "6px 16px",
+  marginBottom: "12px",
+  borderRadius: "6px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "8px",
+  minHeight: "36px"
+}}>
+  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+    <Link href="/admin/dashboard" style={{ 
+      color: "#ffd700", 
+      textDecoration: "none",
+      fontSize: "18px",
+      title: "Dashboard"
+    }}>📊</Link>
+    <Link href="/admin" style={{ 
+      color: "white", 
+      textDecoration: "none",
+      fontSize: "18px",
+      title: "Candidates"
+    }}>👥</Link>
+    <Link href="/admin/templates" style={{ 
+      color: "white", 
+      textDecoration: "none",
+      fontSize: "18px",
+      title: "Templates"
+    }}>📧</Link>
+    <Link href="/admin/logs" style={{ 
+      color: "white", 
+      textDecoration: "none",
+      fontSize: "18px",
+      title: "Logs"
+    }}>📊</Link>
+    <Link href="/admin/bulk" style={{ 
+      color: "white", 
+      textDecoration: "none",
+      fontSize: "18px",
+      title: "Bulk Actions"
+    }}>⚡</Link>
+  </div>
+  <Link href="/" style={{ 
+    color: "rgba(255,255,255,0.6)", 
+    textDecoration: "none",
+    fontSize: "14px",
+    title: "View Site"
+  }}>
+    🏠
+  </Link>
+</div>
