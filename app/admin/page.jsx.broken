@@ -1,0 +1,1125 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { elegantEmail, getSBBody, getNclPhotoBody, getVideoEmail, getOmniaEmail, getVisaEmail, getFinalPrepEmail, getSecurityEmail, getSTCWEmail } from '../../lib/emailTemplates';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, updateDoc, collection, getDocs, query, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { db, auth } from '../../lib/firebase';
+
+const navy  = '#0a1628';
+const ocean = '#0e4d8a';
+const gold  = '#c9a84c';
+const teal  = '#0d9488';
+
+const PIPELINE_STAGES = [
+  { key: 'new',          label: 'Applied',       color: '#4f46e5', bg: '#e0e7ff', cardBg: '#eef2ff', border: '#818cf8' },
+  { key: 'reviewing',    label: 'Reviewing',     color: '#0284c7', bg: '#bae6fd', cardBg: '#e0f2fe', border: '#38bdf8' },
+  { key: 'preinterview', label: 'Pre Interview', color: '#db2777', bg: '#fce7f3', cardBg: '#fdf2f8', border: '#f472b6' },
+  { key: 'interviewed',  label: 'Interviewed',   color: '#d97706', bg: '#fde68a', cardBg: '#fffbeb', border: '#fbbf24' },
+  { key: 'shortlisted',  label: 'Shortlisted',   color: '#0d9488', bg: '#99f6e4', cardBg: '#f0fdf9', border: '#2dd4bf' },
+  { key: 'offered',      label: 'Offered',       color: '#7c3aed', bg: '#ddd6fe', cardBg: '#f5f3ff', border: '#a78bfa' },
+  { key: 'placed',       label: 'Placed',        color: '#15803d', bg: '#bbf7d0', cardBg: '#f0fdf4', border: '#4ade80' },
+  { key: 'rejected',     label: 'Rejected',      color: '#b91c1c', bg: '#fecaca', cardBg: '#fff5f5', border: '#f87171' },
+];
+
+const PHOTO_PIPELINE_STAGES = [
+  { key: 'new',          label: 'Applied',       color: '#4f46e5', bg: '#e0e7ff', cardBg: '#eef2ff', border: '#818cf8' },
+  { key: 'reviewing',    label: 'Reviewing',     color: '#0284c7', bg: '#bae6fd', cardBg: '#e0f2fe', border: '#38bdf8' },
+  { key: 'preinterview', label: 'Pre Interview', color: '#db2777', bg: '#fce7f3', cardBg: '#fdf2f8', border: '#f472b6' },
+  { key: 'interviewed',  label: 'Interviewed',   color: '#d97706', bg: '#fde68a', cardBg: '#fffbeb', border: '#fbbf24' },
+  { key: 'shortlisted',  label: 'Shortlisted',   color: '#0d9488', bg: '#99f6e4', cardBg: '#f0fdf9', border: '#2dd4bf' },
+  { key: 'offered',      label: 'Offered',       color: '#7c3aed', bg: '#ddd6fe', cardBg: '#f5f3ff', border: '#a78bfa' },
+  { key: 'placed',       label: 'Placed',        color: '#15803d', bg: '#bbf7d0', cardBg: '#f0fdf4', border: '#4ade80' },
+  { key: 'rejected',     label: 'Rejected',      color: '#b91c1c', bg: '#fecaca', cardBg: '#fff5f5', border: '#f87171' },
+];
+
+
+
+
+
+export default function AdminPage() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [applications, setApplications] = useState([]);
+  const [photographerApps, setPhotographerApps] = useState([]);
+  const [placements, setPlacements] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [trainingSessions, setTrainingSessions] = useState([]);
+  const [trainingLeads, setTrainingLeads] = useState([]);
+  const [fastTrackApps, setFastTrackApps] = useState([]);
+  const [candidateDocs, setCandidateDocs] = useState([]);
+  const [assignmentEmails, setAssignmentEmails] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [activeTab, setActiveTab] = useState('pipeline');
+  const [search, setSearch] = useState('');
+  const [noteText, setNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [emailModal, setEmailModal] = useState(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailCc, setEmailCc] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState('');
+  const [calendarModal, setCalendarModal] = useState(null);
+  const [calendarDate, setCalendarDate] = useState('');
+  const [calendarTime, setCalendarTime] = useState('10:00');
+  const [calendarDuration, setCalendarDuration] = useState('60');
+  const [schedulingInterview, setSchedulingInterview] = useState(false);
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
+  const [bulkEmailSubject, setBulkEmailSubject] = useState('');
+  const [bulkEmailBody, setBulkEmailBody] = useState('');
+  const [sendingBulk, setSendingBulk] = useState(false);
+  const [dragging, setDragging] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
+  const [photoDragging, setPhotoDragging] = useState(null);
+  const [photoDragOver, setPhotoDragOver] = useState(null);
+  const [assignmentSyncing, setAssignmentSyncing] = useState(false);
+  const [assignmentError, setAssignmentError] = useState('');
+  const [sendingTestimonials, setSendingTestimonials] = useState(false);
+  const [testimonialResult, setTestimonialResult] = useState('');
+  const [sendingReport, setSendingReport] = useState(false);
+  const [reportResult, setReportResult] = useState('');
+  const [gmailSyncLoading, setGmailSyncLoading] = useState(false);
+  const [gmailSyncError, setGmailSyncError] = useState('');
+  const [gmailEmails, setGmailEmails] = useState([]);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+      if (u) {
+        loadApplications();
+        loadPhotographerApps();
+        loadPlacements();
+        loadDocuments();
+        loadTrainingSessions();
+        loadTrainingLeads();
+        loadFastTrackApps();
+        loadCandidateDocs();
+        loadInquiries();
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  async function loadApplications() {
+    try {
+      const snap = await getDocs(collection(db, 'applications'));
+      const apps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const emailCount = {};
+      apps.forEach(a => { if (a.email) emailCount[a.email] = (emailCount[a.email] || 0) + 1; });
+      setApplications(apps.map(a => ({ ...a, isDuplicate: a.email && emailCount[a.email] > 1 })));
+    } catch(e) { console.error('loadApplications:', e); }
+  }
+
+  async function loadPhotographerApps() {
+    try {
+      const snap = await getDocs(collection(db, 'photographerApplications'));
+      setPhotographerApps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function loadPlacements() {
+    try {
+      const snap = await getDocs(collection(db, 'placements'));
+      setPlacements(snap.docs.map(d => ({ id: d.id, ...d.data(), fee: parseFloat(d.data().fee) || 0 })));
+    } catch(e) {}
+  }
+
+  async function loadDocuments() {
+    try {
+      const snap = await getDocs(collection(db, 'documents'));
+      setDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function loadTrainingSessions() {
+    try {
+      const snap = await getDocs(collection(db, 'trainingSessions'));
+      setTrainingSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function loadTrainingLeads() {
+    try {
+      const snap = await getDocs(collection(db, 'trainingLeads'));
+      setTrainingLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function loadFastTrackApps() {
+    try {
+      const snap = await getDocs(collection(db, 'fastTrackApplications'));
+      setFastTrackApps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function loadCandidateDocs() {
+    try {
+      const snap = await getDocs(collection(db, 'candidateDocuments'));
+      setCandidateDocs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function loadInquiries() {
+    try {
+      const snap = await getDocs(collection(db, 'employerInquiries'));
+      setInquiries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+  }
+
+  async function saveNote() {
+    if (!selected) return;
+    setSavingNote(true);
+    try {
+      await updateDoc(doc(db, selected._col || 'applications', selected.id), { notes: noteText });
+      setApplications(prev => prev.map(a => a.id === selected.id ? { ...a, notes: noteText } : a));
+      setSelected(prev => ({ ...prev, notes: noteText }));
+    } catch(e) {}
+    setSavingNote(false);
+  }
+
+  async function moveCandidate(id, newStatus) {
+    const candidate = applications.find(a => a.id === id);
+    const tpl = candidate && getStageEmail(candidate, newStatus);
+    if (tpl && candidate?.email) {
+      const ok = window.confirm('Move ' + (candidate.fullName || 'candidate') + ' to ' + newStatus + '?\n\nSend notification email to ' + candidate.email + '?');
+      if (ok) {
+        try { await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: candidate.email, cc: 'careers@selectivecrew.com', subject: tpl.subject, text: tpl.text, html: tpl.html || null }) }); } catch(e) {}
+      }
+    }
+    try {
+      await updateDoc(doc(db, 'applications', id), { status: newStatus });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+      if (selected?.id === id) setSelected(prev => ({ ...prev, status: newStatus }));
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function sendInterviewReminders() {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const list = applications.filter(a => a.status === 'preinterview' && a.email && a.interviewDate === tomorrowStr);
+    if (!list.length) { alert('No interviews tomorrow.'); return; }
+    if (!window.confirm('Send reminders to ' + list.length + ' candidates?')) return;
+    let sent = 0;
+    for (const c of list) {
+      try { await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: c.email, subject: 'Reminder: Interview tomorrow - Selective Crew', text: 'Hi ' + (c.fullName?.split(' ')[0] || 'there') + ',\n\nYour interview is tomorrow. Join 5 min early, dress professionally, speak in English.\n\nBest regards,\nSelective Crew' }) }); sent++; } catch(e) {}
+      await new Promise(r => setTimeout(r, 200));
+    }
+    alert(sent + ' reminders sent!');
+  }
+
+  async function sendTestimonialRequests() {
+    const placed = applications.filter(a => a.status === 'placed' && a.email);
+    if (!placed.length) { alert('No placed candidates found.'); return; }
+    if (!window.confirm('Send testimonial request to ' + placed.length + ' candidates?')) return;
+    setSendingTestimonials(true);
+    let sent = 0;
+    for (const c of placed) {
+      try { await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: c.email, subject: 'How is life onboard? - Selective Crew', text: 'Hi ' + (c.fullName?.split(' ')[0] || 'there') + ',\n\nWe hope you are loving life onboard!\n\nWould you record a short video sharing your experience and post it on our Facebook page?\n\nhttps://www.facebook.com/selectivecrew/reviews\n\nThank you!\nSelective Crew' }) }); sent++; } catch(e) {}
+      await new Promise(r => setTimeout(r, 200));
+    }
+    setSendingTestimonials(false);
+    setTestimonialResult('Sent: ' + sent);
+  }
+
+  async function sendWeeklyReport() {
+    setSendingReport(true);
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now - 7*24*60*60*1000);
+      const thisWeek = applications.filter(a => a.createdAt?.seconds && new Date(a.createdAt.seconds*1000) >= weekAgo).length;
+      const placed = applications.filter(a => a.status === 'placed').length;
+      const stageCounts = {};
+      applications.forEach(a => { const s = a.status||'new'; stageCounts[s]=(stageCounts[s]||0)+1; });
+      const stageLines = Object.entries(stageCounts).map(([s,n]) => '  ' + s + ': ' + n).join('\n');
+      await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: 'careers@selectivecrew.com', subject: 'Weekly Report - Selective Crew - ' + now.toLocaleDateString(), text: 'WEEKLY REPORT\n\nTotal candidates: ' + applications.length + '\nNew this week: ' + thisWeek + '\nPlaced: ' + placed + '\n\nPIPELINE:\n' + stageLines + '\n\nGenerated: ' + now.toLocaleString() }) });
+      setReportResult('Report sent!');
+    } catch(e) { setReportResult('Failed: ' + e.message); }
+    setSendingReport(false);
+  }
+
+  async function syncAssignments() {
+    setAssignmentSyncing(true); setAssignmentError('');
+    try {
+      const res = await fetch('/api/gmail?action=assignments');
+      const data = await res.json();
+      if (data.error) { setAssignmentError(data.error); } else { setAssignmentEmails(data.emails || []); }
+    } catch(e) { setAssignmentError('Failed: ' + e.message); }
+    setAssignmentSyncing(false);
+  }
+
+  function parseAssignmentSubject(subject) {
+    try {
+      const nameMatch = subject.match(/for\s*-\s*([A-Z][A-Z\s]+?)\s*-\s*[A-Z]\d+/i);
+      const idMatch = subject.match(/([A-Z]\d{4,})/i);
+      const dateMatch = subject.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d+,?\s+\d{4}/i);
+      const fleetMatch = subject.match(/New Hire\s*-\s*(\w+)\s+Joining/i);
+      const shipMatch = subject.match(/[A-Z]\d{4,}\s+(.+?)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+      return { fullName: nameMatch?nameMatch[1].trim():'', employeeId: idMatch?idMatch[1].trim():'', startDate: dateMatch?dateMatch[0].trim():'', fleet: fleetMatch?fleetMatch[1].trim():'', ship: shipMatch?shipMatch[1].trim():'' };
+    } catch(e) { return {}; }
+  }
+
+  async function processAssignment(email) {
+    const parsed = parseAssignmentSubject(email.subject);
+    if (!parsed.fullName) { alert('Could not parse name from: ' + email.subject); return; }
+    const nameLower = parsed.fullName.toLowerCase();
+    const match = applications.find(a => a.fullName && a.fullName.toLowerCase().includes(nameLower.split(' ')[0].toLowerCase()));
+    try {
+      const mod = await import('firebase/firestore');
+      if (match) {
+        await mod.updateDoc(mod.doc(db,'applications',match.id),{status:'placed',starboardId:parsed.employeeId,ship:parsed.ship,embarkationDate:parsed.startDate,placedAt:mod.serverTimestamp()});
+        await loadApplications(); alert('Placed: ' + parsed.fullName);
+      } else {
+        await mod.addDoc(mod.collection(db,'applications'),{fullName:parsed.fullName,email:email.email||'',status:'placed',position:'Retail Sales - Starboard',starboardId:parsed.employeeId,ship:parsed.ship,embarkationDate:parsed.startDate,createdAt:mod.serverTimestamp(),source:'starboard_assignment'});
+        await loadApplications(); alert('New placement: ' + parsed.fullName);
+      }
+      setAssignmentEmails(prev => prev.filter(e => e.id !== email.id));
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function connectGmail() {
+    try { const res = await fetch('/api/gmail?action=auth-url'); const data = await res.json(); if (data.url) window.location.href = data.url; } catch(e) { alert('Failed: ' + e.message); }
+  }
+
+  async function loadGmailEmails() {
+    setGmailSyncLoading(true); setGmailSyncError('');
+    try { const res = await fetch('/api/gmail?action=emails'); const data = await res.json(); if (data.error) setGmailSyncError(data.error); else setGmailEmails(data.emails || []); } catch(e) { setGmailSyncError('Failed: ' + e.message); }
+    setGmailSyncLoading(false);
+  }
+
+  async function importFromGmail(email) {
+    if (applications.find(a => a.email === email.email)) { alert('Already in CRM'); return; }
+    try {
+      const mod = await import('firebase/firestore');
+      await mod.addDoc(mod.collection(db,'applications'),{fullName:email.name,email:email.email,whatsapp:'',country:'',position:'Imported from Gmail',status:'new',source:'gmail_import',createdAt:mod.serverTimestamp(),notes:'Subject: '+email.subject});
+      await loadApplications(); setGmailEmails(prev => prev.filter(e => e.id !== email.id)); alert('Imported: ' + email.name);
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  const filteredApps = applications.filter(a =>
+    !search ||
+    (a.fullName||'').toLowerCase().includes(search.toLowerCase()) ||
+    (a.email||'').toLowerCase().includes(search.toLowerCase()) ||
+    (a.country||'').toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}><p>Loading...</p></div>;
+
+  if (!user) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#0a1628,#1a3a5c)'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'40px 36px',width:360,boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+          <div style={{textAlign:'center',marginBottom:28}}>
+            <div style={{fontSize:32,marginBottom:8}}>&#x2693;</div>
+            <p style={{fontSize:15,fontWeight:800,color:navy}}>Selective Crew CRM</p>
+          </div>
+          <input type='email' placeholder='Email' value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} style={{width:'100%',padding:'11px 14px',border:'1.5px solid #dde5f0',borderRadius:9,fontSize:14,boxSizing:'border-box',outline:'none',marginBottom:12}}/>
+          <input type='password' placeholder='Password' value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={async e=>{if(e.key==='Enter'){try{await signInWithEmailAndPassword(auth,loginEmail,loginPassword);}catch(err){setLoginError(err.message);}}}} style={{width:'100%',padding:'11px 14px',border:'1.5px solid #dde5f0',borderRadius:9,fontSize:14,boxSizing:'border-box',outline:'none',marginBottom:16}}/>
+          {loginError && <div style={{color:'#991b1b',background:'#fef2f2',padding:'10px',borderRadius:8,fontSize:12,marginBottom:12}}>{loginError}</div>}
+          <button onClick={async()=>{try{await signInWithEmailAndPassword(auth,loginEmail,loginPassword);}catch(err){setLoginError(err.message);}}} style={{width:"100%",background:navy,color:"#fff",border:"none",borderRadius:10,padding:13,fontSize:15,fontWeight:700,cursor:"pointer"}}>Sign In</button>
+        </div>
+      </div>
+    </div>
+  );
+
+
+
+
+  return (
+    <div style={{minHeight:'100vh',background:'#f0f4fb',fontFamily:'system-ui,sans-serif',display:'flex',flexDirection:'column'}} onClick={()=>setShowMoreMenu(false)}>
+
+      {/* HEADER */}
+      <div style={{background:navy,padding:'0 20px',display:'flex',alignItems:'center',justifyContent:'space-between',height:56,flexShrink:0}}>
+          <span style={{fontSize:20}}>&#9875;</span>
+
+          <div>
+            <p style={{fontSize:13,fontWeight:800,margin:0,color:'#f8f4ec'}}>Selective Crew CRM</p>
+            <p style={{fontSize:10,color:'rgba(255,255,255,0.5)',margin:0}}>{user.email}</p>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:12,color:'rgba(255,255,255,0.5)'}}>{applications.length} candidates</span>
+          <button onClick={()=>signOut(auth)} style={{background:'rgba(255,255,255,0.1)',color:'#fff',border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer'}}>Sign Out</button>
+        </div>
+      </div>
+
+      {/* TAB BAR */}
+      <div style={{background:'#fff',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,paddingRight:16}}>
+        <div style={{display:'flex',alignItems:'center'}}>
+          {[
+            {key:'pipeline',     label:'Pipeline',    count:applications.length},
+            {key:'photopipeline',label:'? Photo',    count:photographerApps.length||null},
+            {key:'list',         label:'Candidates',  count:applications.length},
+            {key:'placements',   label:'Placements',  count:null},
+            {key:'reports',      label:'Reports',     count:null},
+          ].map(tab => (
+            <button key={tab.key} onClick={()=>{setActiveTab(tab.key);setShowMoreMenu(false);}}
+              style={{padding:'14px 14px',fontSize:12,fontWeight:600,background:'none',border:'none',whiteSpace:'nowrap',borderBottom:activeTab===tab.key?'3px solid '+ocean:'3px solid transparent',color:activeTab===tab.key?ocean:'#888',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+              {tab.label}
+              {tab.count!=null && <span style={{background:activeTab===tab.key?ocean:'#eee',color:activeTab===tab.key?'#fff':'#888',borderRadius:20,padding:'1px 6px',fontSize:10,fontWeight:700}}>{tab.count}</span>}
+            </button>
+          ))}
+          <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>setShowMoreMenu(m=>!m)}
+              style={{padding:'14px 14px',fontSize:12,fontWeight:600,background:'none',border:'none',borderBottom:'3px solid transparent',color:'#888',cursor:'pointer'}}>
+              {showMoreMenu?'More ?':'More ?'}
+            </button>
+            {showMoreMenu && (
+              <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid #e8eef8',borderRadius:12,boxShadow:'0 8px 32px rgba(14,77,138,0.12)',zIndex:200,minWidth:220,padding:8}}>
+                {[
+                  {key:'employers',   label:'Employers',            count:inquiries.length},
+                  {key:'gmail',       label:'Gmail Import',         count:null},
+                  {key:'documents',   label:'Doc Library',          count:documents.length||null},
+                  {key:'training',    label:'Training Sessions',    count:trainingSessions.length||null},
+                  {key:'leads',       label:'Email Leads',          count:trainingLeads.length||null},
+                  {key:'photographer',label:'? Photo Apps',        count:photographerApps.length||null},
+                  {key:'fasttrack',   label:'Fast Track Apps',      count:fastTrackApps.length||null},
+                  {key:'candidatedocs',label:'Candidate Docs',      count:candidateDocs.length||null},
+                  {key:'assignments', label:'Starboard Assignments', count:assignmentEmails.length||null},
+                ].map(tab => (
+                  <button key={tab.key} onClick={()=>{setActiveTab(tab.key);setShowMoreMenu(false);}}
+                    style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'9px 14px',fontSize:13,fontWeight:activeTab===tab.key?700:400,background:activeTab===tab.key?'#f0f7ff':'none',border:'none',borderRadius:8,color:activeTab===tab.key?ocean:'#555',cursor:'pointer'}}>
+                    {tab.label}
+                    {tab.count!=null&&tab.count>0 && <span style={{background:ocean,color:'#fff',borderRadius:20,padding:'1px 7px',fontSize:10,fontWeight:700}}>{tab.count}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}
+          style={{padding:'7px 14px',borderRadius:20,border:'1px solid #e8eef8',fontSize:13,outline:'none',width:180,background:'#f8faff'}}/>
+      </div>
+
+      {/* CONTENT */}
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+        {/* PIPELINE */}
+        {activeTab==='pipeline' && (
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+            <div style={{padding:'10px 20px',background:'#fff',borderBottom:'1px solid #e8eef8',display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
+              <span style={{fontSize:12,color:'#888',marginRight:4}}>Filter:</span>
+              <button onClick={sendInterviewReminders} style={{marginLeft:'auto',background:'#8b5cf6',color:'#fff',border:'none',borderRadius:8,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Send Interview Reminders</button>
+            </div>
+            <div style={{flex:1,overflowX:'auto',overflowY:'hidden',padding:'20px 16px',display:'flex',gap:14,alignItems:'flex-start'}}>
+              {PIPELINE_STAGES.map(stage => {
+                const cards = filteredApps.filter(a => (a.status || 'new') === stage.key);
+                const isOver = dragOver === stage.key;
+                return (
+                  <div key={stage.key}
+                    onDragOver={e=>{e.preventDefault();setDragOver(stage.key);}}
+                    onDrop={async e=>{e.preventDefault();setDragOver(null);if(dragging&&dragging.status!==stage.key){await moveCandidate(dragging.id,stage.key);}setDragging(null);}}
+                    onDragLeave={()=>setDragOver(null)}
+                    style={{minWidth:200,width:200,flexShrink:0,background:isOver?'#e0f0ff':'#f8faff',borderRadius:16,border:isOver?'2px dashed '+ocean:'2px solid #e8eef8',transition:'all 0.15s'}}>
+                    <div style={{padding:'12px 14px',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:7}}>
+                        <div style={{width:9,height:9,borderRadius:'50%',background:stage.color}}/>
+                        <span style={{fontSize:12,fontWeight:700,color:navy}}>{stage.label}</span>
+                      </div>
+                      <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'2px 7px',fontSize:11,fontWeight:800}}>{cards.length}</span>
+                    </div>
+                    <div style={{padding:8,display:'flex',flexDirection:'column',gap:7,minHeight:80,maxHeight:'calc(100vh - 220px)',overflowY:'auto'}}>
+                      {cards.length===0 && <div style={{textAlign:'center',padding:'16px 0',color:'#ccc',fontSize:11}}>Drop here</div>}
+                      {cards.map(app => {
+                        const date = app.createdAt?.seconds ? new Date(app.createdAt.seconds*1000).toLocaleDateString() : '';
+                        const isSelected = selected?.id === app.id;
+                        return (
+                          <div key={app.id}
+                            draggable
+                            onDragStart={e=>{setDragging(app);e.dataTransfer.effectAllowed='move';}}
+                            onClick={()=>{setSelected({...app,_col:'applications'});setNoteText(app.notes||'');}}
+                            style={{background:isSelected?'#dbeafe':(stage.cardBg||'#fff'),borderRadius:10,padding:'10px 12px',border:isSelected?'2px solid '+ocean:'2px solid '+(stage.border||'#e8eef8'),borderLeft:'4px solid '+stage.color,cursor:'pointer',transition:'all 0.15s',opacity:dragging?.id===app.id?0.4:1}}>
+                            <p style={{fontSize:13,fontWeight:700,color:navy,margin:'0 0 3px'}}>
+                              {app.fullName}
+                              {app.isDuplicate && <span style={{marginLeft:5,fontSize:9,fontWeight:800,background:'#fef2f2',color:'#dc2626',borderRadius:3,padding:'1px 4px'}}>DUP</span>}
+                            </p>
+                            <p style={{fontSize:11,color:'#888',margin:'0 0 3px'}}>{app.country||''}</p>
+                            <p style={{fontSize:10,color:'#aaa',margin:'0 0 6px'}}>{(app.position||'').substring(0,35)}</p>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                              <span style={{fontSize:10,color:'#bbb'}}>{date}</span>
+                              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                                {app.grade && <span style={{fontSize:9,fontWeight:800,background:app.grade==='A'?'#d1fae5':app.grade==='B'?'#dbeafe':app.grade==='C'?'#fef3c7':'#fee2e2',color:app.grade==='A'?'#16a34a':app.grade==='B'?'#1e40af':app.grade==='C'?'#92400e':'#991b1b',borderRadius:3,padding:'1px 4px'}}>{app.grade}</span>}
+                                {app.notes && <span style={{color:gold,fontSize:10}}>?</span>}
+                                {app.notes && <span style={{color:gold,fontSize:10}}>?</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* PHOTO PIPELINE */}
+        {activeTab==='photopipeline' && (
+          <div style={{flex:1,overflowX:'auto',overflowY:'hidden',padding:'20px 16px',display:'flex',gap:14,alignItems:'flex-start'}}>
+            {PHOTO_PIPELINE_STAGES.map(stage => {
+              const cards = photographerApps.filter(a => (a.status||'new') === stage.key);
+              const isOver = photoDragOver === stage.key;
+              return (
+                <div key={stage.key}
+                  onDragOver={e=>{e.preventDefault();setPhotoDragOver(stage.key);}}
+                  onDrop={async e=>{e.preventDefault();setPhotoDragOver(null);if(!photoDragging)return;try{const mod=await import('firebase/firestore');await mod.updateDoc(mod.doc(db,'photographerApplications',photoDragging.id),{status:stage.key});loadPhotographerApps();}catch(err){console.error(err);}setPhotoDragging(null);}}
+                  onDragLeave={()=>setPhotoDragOver(null)}
+                  style={{minWidth:200,width:200,flexShrink:0,background:isOver?'#e0f0ff':'#f8faff',borderRadius:16,border:isOver?'2px dashed '+ocean:'2px solid #e8eef8'}}>
+                  <div style={{padding:'12px 14px',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:7}}>
+                      <div style={{width:9,height:9,borderRadius:'50%',background:stage.color}}/>
+                      <span style={{fontSize:12,fontWeight:700,color:navy}}>{stage.label}</span>
+                    </div>
+                    <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'2px 7px',fontSize:11,fontWeight:800}}>{cards.length}</span>
+                  </div>
+                  <div style={{padding:8,display:'flex',flexDirection:'column',gap:7,minHeight:80}}>
+                    {cards.length===0 && <div style={{textAlign:'center',padding:'16px 0',color:'#ccc',fontSize:11}}>Drop here</div>}
+                    {cards.map(app => (
+                      <div key={app.id} draggable
+                        onDragStart={e=>{setPhotoDragging(app);e.dataTransfer.effectAllowed='move';}}
+                        onClick={()=>{setSelected({...app,_col:'photographerApplications'});setNoteText(app.notes||'');}}
+                        style={{background:stage.cardBg||'#fff',borderRadius:10,padding:'10px 12px',border:'2px solid '+(stage.border||'#e8eef8'),borderLeft:'4px solid '+stage.color,cursor:'pointer',opacity:photoDragging?.id===app.id?0.4:1}}>
+                        <p style={{fontSize:13,fontWeight:700,color:navy,margin:'0 0 3px'}}>{app.name||app.fullName||'Unknown'}</p>
+                        <p style={{fontSize:11,color:'#888',margin:'0 0 3px'}}>{app.country||''}</p>
+                        <p style={{fontSize:10,color:'#aaa',margin:0}}>{app.cameraExperience||'Photographer'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {/* LIST */}
+        {activeTab==='list' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:8}}>
+                <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>All Candidates ({filteredApps.length})</h2>
+                <button onClick={()=>{if(!filteredApps.length)return;const h=['fullName','email','whatsapp','country','position','status','score','grade'];const rows=filteredApps.map(a=>h.map(k=>{const v=a[k];return typeof v==='string'?'"'+v.replace(/"/g,'""')+'"':v??'';}).join(','));const csv=[h.join(','),...rows].join('\n');const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const el=document.createElement('a');el.href=url;el.download='candidates.csv';el.click();}}
+                  style={{background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Export CSV</button>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {filteredApps.map(app => {
+                  const stage = PIPELINE_STAGES.find(s=>s.key===(app.status||'new'))||PIPELINE_STAGES[0];
+                  const date = app.createdAt?.seconds ? new Date(app.createdAt.seconds*1000).toLocaleDateString() : '';
+                  return (
+                    <div key={app.id} onClick={()=>{setSelected({...app,_col:'applications'});setNoteText(app.notes||'');}}
+                      style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',cursor:'pointer',borderLeft:'4px solid '+stage.color}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+                        <div>
+                          <p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>
+                            {app.fullName}
+                            {app.isDuplicate && <span style={{marginLeft:8,fontSize:10,fontWeight:800,background:'#fef2f2',color:'#dc2626',borderRadius:6,padding:'2px 7px'}}>DUP</span>}
+                          </p>
+                          <p style={{fontSize:12,color:'#aaa',margin:0}}>{app.country} ? {app.position}</p>
+                          <p style={{fontSize:12,color:'#aaa',margin:0}}>{app.country} ? {app.position}</p>
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                          <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>{stage.label}</span>
+                          {app.grade && <span style={{fontSize:10,fontWeight:800,background:app.grade==='A'?'#d1fae5':app.grade==='B'?'#dbeafe':app.grade==='C'?'#fef3c7':'#fee2e2',color:app.grade==='A'?'#16a34a':app.grade==='B'?'#1e40af':app.grade==='C'?'#92400e':'#991b1b',borderRadius:4,padding:'2px 7px'}}>Grade {app.grade}</span>}
+                          <span style={{fontSize:11,color:'#aaa'}}>{date}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PLACEMENTS */}
+        {activeTab==='placements' && (()=>{
+          const placed = applications.filter(a=>a.status==='placed');
+          const totalRevenue = placements.reduce((s,p)=>s+(p.fee||0),0);
+          return (
+            <>
+                <span style={{fontSize:13,fontWeight:700,color:'#16a34a'}}>{placed.length} placed candidates</span>
+                <span style={{fontSize:13,fontWeight:700,color:'#16a34a'}}>{placed.length} placed ? ${totalRevenue.toLocaleString()} revenue</span>
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  {testimonialResult && <span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{testimonialResult}</span>}
+                  <button onClick={sendTestimonialRequests} disabled={sendingTestimonials}
+                    {sendingTestimonials?'Sending...':'? Request Testimonials'}
+                    {sendingTestimonials?'Sending...':'? Request Testimonials'}
+                  </button>
+                </div>
+              </div>
+              <div style={{flex:1,overflowY:'auto',padding:24}}>
+                <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:10}}>
+                  {placed.map(app=>(
+                    <div key={app.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',borderLeft:'4px solid #16a34a'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                        <div>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.country} ? {app.position}</p>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.country} ? {app.position}</p>
+                          {app.ship && <p style={{fontSize:12,color:teal,margin:0}}>Ship: {app.ship} {app.embarkationDate?'? '+app.embarkationDate:''}</p>}
+                        </div>
+                        {app.whatsapp && <a href={'https://wa.me/'+(app.whatsapp).replace(/\D/g,'')} target="_blank" rel="noopener noreferrer" style={{background:'#25D366',color:'#fff',borderRadius:8,padding:'6px 12px',textDecoration:'none',fontSize:12,fontWeight:700}}>WhatsApp</a>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          );
+        })()}
+
+        {/* REPORTS */}
+        {activeTab==='reports' && (()=>{
+          const now = new Date();
+          const weekAgo = new Date(now-7*24*60*60*1000);
+          const monthAgo = new Date(now-30*24*60*60*1000);
+          const thisWeek = applications.filter(a=>a.createdAt?.seconds&&new Date(a.createdAt.seconds*1000)>=weekAgo).length;
+          const thisMonth = applications.filter(a=>a.createdAt?.seconds&&new Date(a.createdAt.seconds*1000)>=monthAgo).length;
+          const placed = applications.filter(a=>a.status==='placed').length;
+          const conv = applications.length>0?((placed/applications.length)*100).toFixed(1):0;
+          const countryCounts={};applications.forEach(a=>{const c=a.country||'Unknown';countryCounts[c]=(countryCounts[c]||0)+1;});
+          const topCountries=Object.entries(countryCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+          return (
+            <div style={{flex:1,overflowY:'auto',padding:24}}>
+              <div style={{maxWidth:900,margin:'0 auto'}}>
+                <div style={{background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:12,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+                  <p style={{fontSize:14,fontWeight:700,color:navy,margin:0}}>Weekly Report</p>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    {reportResult && <span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{reportResult}</span>}
+                    <button onClick={sendWeeklyReport} disabled={sendingReport} style={{background:sendingReport?'#ccc':ocean,color:'#fff',border:'none',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{sendingReport?'Sending...':'? Send Weekly Report'}</button>
+                  </div>
+                </div>
+                  {[{label:'Total',value:applications.length,color:'#6366f1',icon:'?'},{label:'This Month',value:thisMonth,color:ocean,icon:'?'},{label:'Placed',value:placed.length,color:'#16a34a',icon:'?'},{label:'Conversion',value:conv+'%',color:'#f59e0b',icon:'?'}].map((k,i)=>(
+                  {[{label:'Total',value:applications.length,color:'#6366f1',icon:'?'},{label:'This Month',value:thisMonth,color:ocean,icon:'?'},{label:'Placed',value:placed,color:'#16a34a',icon:'?'},{label:'Conversion',value:conv+'%',color:'#f59e0b',icon:'?'}].map((k,i)=>(
+                    <div key={i} style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}><span style={{fontSize:22}}>{k.icon}</span><span style={{fontSize:10,color:'#aaa',fontWeight:600,textTransform:'uppercase'}}>{k.label}</span></div>
+                      <p style={{fontSize:26,fontWeight:800,color:k.color,margin:'0 0 2px'}}>{k.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+                  <div style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}>
+                    <h3 style={{fontSize:14,fontWeight:700,color:navy,marginBottom:14}}>By Country</h3>
+                    {topCountries.map(([country,count])=>(
+                      <div key={country} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                        <span style={{fontSize:13,color:'#555'}}>{country}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{height:6,width:Math.round((count/applications.length)*100),background:ocean,borderRadius:3,minWidth:4}}/>
+                          <span style={{fontSize:12,fontWeight:700,color:ocean}}>{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}>
+                    <h3 style={{fontSize:14,fontWeight:700,color:navy,marginBottom:14}}>Pipeline</h3>
+                    {PIPELINE_STAGES.map(s=>{const count=applications.filter(a=>(a.status||'new')===s.key).length;return(
+                      <div key={s.key} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:7}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:8,height:8,borderRadius:'50%',background:s.color}}/><span style={{fontSize:12,color:'#555'}}>{s.label}</span></div>
+                        <span style={{fontSize:12,fontWeight:700,color:s.color}}>{count}</span>
+                      </div>
+                    );})}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        {/* MORE TABS */}
+        {activeTab==='employers' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Employer Inquiries ({inquiries.length})</h2>
+              {inquiries.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No inquiries yet.</p> : (
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  {inquiries.map(inq=>(
+                    <div key={inq.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                      <div>
+                        <p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>{inq.companyName||inq.name||'Unknown'}</p>
+                        <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{inq.email}</p>
+                        <p style={{fontSize:12,color:'#aaa',margin:0}}>{inq.message||''}</p>
+                      </div>
+                      {inq.email && <a href={'mailto:'+inq.email} style={{background:ocean,color:'#fff',borderRadius:8,padding:'6px 14px',textDecoration:'none',fontSize:12,fontWeight:700}}>Reply</a>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==='gmail' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24,flexWrap:'wrap',gap:12}}>
+                  <div>
+                    <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:'0 0 4px'}}>Gmail Import</h2>
+                    <p style={{fontSize:13,color:'#888',margin:0}}>Import leads labeled "Import to CRM" in Gmail</p>
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={connectGmail} style={{background:navy,color:'#fff',border:'none',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Connect Gmail</button>
+                    <button onClick={loadGmailEmails} disabled={gmailSyncLoading} style={{background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{gmailSyncLoading?'Loading...':'Sync Emails'}</button>
+                  </div>
+                </div>
+                {gmailSyncError && <div style={{background:'#fff5f5',border:'1px solid #fecaca',borderRadius:10,padding:'12px 16px',marginBottom:16}}><p style={{fontSize:13,color:'#dc2626',margin:0}}>{gmailSyncError}</p></div>}
+                {gmailEmails.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No emails. Label emails "Import to CRM" in Gmail then click Sync.</p> : (
+                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                    {gmailEmails.map(email=>(
+                      <div key={email.id} style={{background:'#f8faff',borderRadius:12,padding:'14px 16px',border:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+                        <div>
+                          <p style={{fontSize:14,fontWeight:700,color:navy,margin:'0 0 2px'}}>{email.name}</p>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{email.email}</p>
+                          <p style={{fontSize:11,color:'#aaa',margin:0}}>{email.subject}</p>
+                        </div>
+                        {applications.find(a=>a.email===email.email)
+                          ? <span style={{fontSize:12,color:teal,fontWeight:600}}>Already in CRM</span>
+                          : <button onClick={()=>importFromGmail(email)} style={{background:teal,color:'#fff',border:'none',borderRadius:8,padding:'7px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>+ Import</button>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab==='documents' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:24}}>
+                  <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>Document Library</h2>
+                  <button onClick={loadDocuments} style={{background:'#f0f4fb',color:'#555',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Refresh</button>
+                </div>
+                {documents.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No documents yet.</p> : (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12}}>
+                    {documents.map(d=>(
+                      <div key={d.id} style={{background:'#f8faff',borderRadius:12,padding:'14px 16px',border:'1px solid #e8eef8'}}>
+                        <p style={{fontSize:13,fontWeight:700,color:navy,margin:'0 0 8px'}}>{d.name}</p>
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:ocean,fontWeight:600,textDecoration:'none'}}>View ?</a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab==='training' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Training Sessions ({trainingSessions.length})</h2>
+              {trainingSessions.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No sessions yet.</p> : (
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  {trainingSessions.map(s=>(
+                    <div key={s.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8'}}>
+                      <p style={{fontSize:12,color:'#888',margin:0}}>{s.email} ? {s.country}</p>
+                      <p style={{fontSize:12,color:'#888',margin:0}}>{s.email} ? {s.country}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==='leads' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}>
+                <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>Email Leads ({trainingLeads.length})</h2>
+                <div style={{display:'flex',gap:8}}>
+                  <input placeholder="Subject..." value={bulkEmailSubject} onChange={e=>setBulkEmailSubject(e.target.value)} style={{padding:'7px 12px',border:'1px solid #e8eef8',borderRadius:8,fontSize:13,outline:'none',width:150}}/>
+                  <input placeholder="Message..." value={bulkEmailBody} onChange={e=>setBulkEmailBody(e.target.value)} style={{padding:'7px 12px',border:'1px solid #e8eef8',borderRadius:8,fontSize:13,outline:'none',width:150}}/>
+                  <button onClick={async()=>{if(!bulkEmailSubject||!bulkEmailBody){alert('Enter subject and message');return;}if(!window.confirm('Send to '+trainingLeads.length+' leads?'))return;setSendingBulk(true);let sent=0;for(const lead of trainingLeads){if(!lead.email)continue;try{await fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:lead.email,subject:bulkEmailSubject,text:bulkEmailBody})});sent++;}catch(e){}await new Promise(r=>setTimeout(r,200));}setSendingBulk(false);alert('Sent to '+sent);}} disabled={sendingBulk}
+                    style={{background:ocean,color:'#fff',border:'none',borderRadius:8,padding:'7px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{sendingBulk?'Sending...':'Send All'}</button>
+                </div>
+              </div>
+              {trainingLeads.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No leads yet.</p> : (
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {trainingLeads.map(lead=>(
+                    <div key={lead.id} style={{background:'#fff',borderRadius:12,padding:'12px 16px',border:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <div>
+                        <p style={{fontSize:13,fontWeight:600,color:navy,margin:'0 0 2px'}}>{lead.email}</p>
+                        <p style={{fontSize:11,color:'#888',margin:0}}>{lead.country||''}</p>
+                      </div>
+                      <button onClick={async()=>{try{await fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:lead.email,subject:bulkEmailSubject||'Follow-up',text:bulkEmailBody||'Hi, following up on your interest.'})});alert('Sent!');}catch(e){alert('Error: '+e.message);}}}
+                        style={{background:'#f0f4fb',color:ocean,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,fontWeight:600,cursor:'pointer'}}>Email</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==='photographer' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>? Photographer Applications ({photographerApps.length})</h2>
+              {photographerApps.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No applications yet.</p> : (
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  {photographerApps.map(app=>{
+                    const stage=PHOTO_PIPELINE_STAGES.find(s=>s.key===(app.status||'new'))||PHOTO_PIPELINE_STAGES[0];
+                    return (
+                      <div key={app.id} onClick={()=>{setSelected({...app,_col:'photographerApplications'});setNoteText(app.notes||'');}}
+                        style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',cursor:'pointer',borderLeft:'4px solid '+stage.color}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                          <div>
+                            <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.email} ? {app.country}</p>
+                            <p style={{fontSize:12,color:'#888',margin:0}}>{app.email} ? {app.country}</p>
+                          </div>
+                          <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>{stage.label}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==='fasttrack' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Fast Track Applications ({fastTrackApps.length})</h2>
+              {fastTrackApps.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No applications yet.</p> : (
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  {fastTrackApps.map(app=>(
+                    <div key={app.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
+                        <div>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.email} ? {app.country}</p>
+                          <p style={{fontSize:11,color:'#aaa',margin:0}}>English: {app.english} ? Team: {app.teamSize||'-'} ? Exp: {app.yearsManagement||'-'} yrs</p>
+                          <p style={{fontSize:11,color:'#aaa',margin:0}}>English: {app.english} ? Team: {app.teamSize||'-'} ? Exp: {app.yearsManagement||'-'} yrs</p>
+                        </div>
+                        <div style={{display:'flex',gap:8}}>
+                          {!applications.find(x=>x.email===app.email) ? (
+                            <button onClick={async()=>{try{const mod=await import('firebase/firestore');await mod.addDoc(mod.collection(db,'applications'),{fullName:app.fullName||app.name,email:app.email,whatsapp:app.whatsapp||'',country:app.country||'',position:'Fast Track Assistant Manager - Starboard',status:'new',createdAt:mod.serverTimestamp(),source:'fast_track_form'});await loadApplications();}catch(e){alert('Error: '+e.message);}}}
+                              style={{background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>+ Add to CRM</button>
+                          ) : (
+                            <button onClick={()=>{const a=applications.find(x=>x.email===app.email);if(a){setSelected(a);setActiveTab('pipeline');}}}
+                              style={{background:'#f0f4fb',color:'#555',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer'}}>View in CRM</button>
+                          )}
+                          <button onClick={async()=>{if(!window.confirm('Delete?'))return;try{const mod=await import('firebase/firestore');await mod.deleteDoc(mod.doc(db,'fastTrackApplications',app.id));loadFastTrackApps();}catch(e){alert('Error: '+e.message);}}}
+                            style={{background:'#fef2f2',color:'#dc2626',border:'1px solid #fca5a5',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==='candidatedocs' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:24}}>
+                  <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>Candidate Documents ({candidateDocs.length})</h2>
+                  <button onClick={loadCandidateDocs} style={{background:'#f0f4fb',color:'#555',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Refresh</button>
+                </div>
+                {candidateDocs.length===0 ? <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No documents submitted yet.</p> : (
+                  <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                    {candidateDocs.map(cdoc=>{
+                      const date=cdoc.submittedAt?.seconds?new Date(cdoc.submittedAt.seconds*1000).toLocaleDateString():'N/A';
+                      return (
+                        <div key={cdoc.id} style={{background:'#f8faff',borderRadius:14,padding:'20px',border:'1px solid #e8eef8'}}>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 12px'}}>{cdoc.email} ? {cdoc.country} ? {date}</p>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 12px'}}>{cdoc.email} ? {cdoc.country} ? {date}</p>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:8}}>
+                            {Object.entries(cdoc.documents||{}).map(([key,val])=>(
+                              <a key={key} href={val.url} target="_blank" rel="noopener noreferrer"
+                                <span style={{fontSize:16}}>?</span>
+                                <span style={{fontSize:16}}>?</span>
+                                <div>
+                                  <div style={{fontSize:11,fontWeight:700,color:navy,textTransform:'capitalize'}}>{key}</div>
+                                  <div style={{fontSize:10,color:'#94a3b8'}}>{val.name?.substring(0,20)}</div>
+                                </div>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab==='assignments' && (
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:24,flexWrap:'wrap',gap:12}}>
+                  <div>
+                    <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:'0 0 4px'}}>Starboard Assignments</h2>
+                    <p style={{fontSize:13,color:'#888',margin:0}}>Emails labeled "Starboard Assignment" in Gmail</p>
+                  </div>
+                  <button onClick={syncAssignments} disabled={assignmentSyncing} style={{background:assignmentSyncing?'#ccc':ocean,color:'#fff',border:'none',borderRadius:10,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{assignmentSyncing?'Syncing...':'Sync Assignments'}</button>
+                </div>
+                {assignmentError && <div style={{background:'#fff5f5',border:'1px solid #fecaca',borderRadius:10,padding:'12px 16px',marginBottom:16}}><p style={{fontSize:13,color:'#dc2626',margin:0}}>{assignmentError}</p></div>}
+                {assignmentEmails.length===0 ? (
+                    <div style={{fontSize:40,marginBottom:12}}>?</div>
+                    <div style={{fontSize:40,marginBottom:12}}>?</div>
+                    <p style={{fontSize:15,fontWeight:600,margin:0}}>No assignment emails found</p>
+                    <p style={{fontSize:13,marginTop:4}}>Label Starboard emails as "Starboard Assignment" in Gmail then click Sync</p>
+                  </div>
+                ) : (
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    {assignmentEmails.map(email=>{
+                      const parsed=parseAssignmentSubject(email.subject);
+                      return (
+                        <div key={email.id} style={{background:'#f8faff',borderRadius:14,padding:'18px 20px',border:'1px solid #e8eef8'}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
+                            <div style={{flex:1}}>
+                              <p style={{fontSize:13,fontWeight:700,color:navy,marginBottom:4}}>{email.subject}</p>
+                              <p style={{fontSize:12,color:'#888',marginBottom:8}}>{email.date}</p>
+                              {parsed.fullName && (
+                                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8}}>
+                                  {[{label:'Candidate',value:parsed.fullName},{label:'Employee ID',value:parsed.employeeId},{label:'Ship',value:parsed.ship},{label:'Fleet',value:parsed.fleet},{label:'Embarkation',value:parsed.startDate}].filter(f=>f.value).map(f=>(
+                                    <div key={f.label} style={{background:'#fff',borderRadius:8,padding:'8px 12px',border:'1px solid #e2e8f0'}}>
+                                      <div style={{fontSize:10,fontWeight:700,color:'#aaa',textTransform:'uppercase',marginBottom:2}}>{f.label}</div>
+                                      <div style={{fontSize:13,fontWeight:600,color:navy}}>{f.value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button onClick={()=>processAssignment(email)} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Process Assignment</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* DETAIL PANEL */}
+        {selected && (activeTab==='pipeline'||activeTab==='list'||activeTab==='photopipeline'||activeTab==='photographer') && (
+          <div style={{width:360,background:'#fff',borderLeft:'1px solid #e8eef8',overflowY:'auto',flexShrink:0,display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'16px 20px',borderBottom:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'center',background:navy}}>
+              <p style={{fontSize:14,fontWeight:800,color:'#f8f4ec',margin:0}}>Candidate Profile</p>
+              <button onClick={()=>setSelected(null)} style={{background:'rgba(255,255,255,0.15)',color:'#fff',border:'none',borderRadius:6,padding:'4px 10px',cursor:'pointer'}}>?</button>
+            </div>
+            <div style={{padding:20,flex:1}}>
+              <div style={{textAlign:'center',marginBottom:20}}>
+                <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,'+ocean+','+teal+')',color:'#fff',fontSize:20,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px'}}>
+                  {(selected.fullName||selected.name||'?').charAt(0).toUpperCase()}
+                </div>
+                <p style={{fontSize:16,fontWeight:800,color:navy,margin:'0 0 4px'}}>{selected.fullName||selected.name||'Unknown'}</p>
+                <p style={{fontSize:12,color:'#888',margin:0}}>{selected.country||''}</p>
+              </div>
+
+              {selected._col!=='photographerApplications' && (
+                <div style={{marginBottom:16}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Pipeline Stage</p>
+                  <select value={selected.status||'new'} onChange={e=>moveCandidate(selected.id,e.target.value)}
+                    style={{width:'100%',padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:'#f8fafc',outline:'none',cursor:'pointer'}}>
+                    {PIPELINE_STAGES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:20}}>
+                {selected.email && <button onClick={()=>{setEmailModal(selected);setEmailSubject('');setEmailBody('');setEmailCc('');setEmailResult('');}} style={{background:ocean,color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:'pointer'}}>Email</button>}
+                {selected.whatsapp && <a href={'https://wa.me/'+(selected.whatsapp).replace(/\D/g,'')} target="_blank" rel="noopener noreferrer" style={{background:'#25D366',color:'#fff',padding:'8px 14px',borderRadius:20,fontSize:12,fontWeight:700,textDecoration:'none'}}>WhatsApp</a>}
+                <button onClick={()=>{setCalendarModal(selected);setCalendarDate('');setCalendarTime('10:00');setScheduleSuccess('');}} style={{background:'#8b5cf6',color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:'pointer'}}>Schedule</button>
+                {selected._col!=='photographerApplications' && (
+                  <button onClick={async()=>{
+                    if(!window.confirm('Move to Photo Pipeline?'))return;
+                    try{
+                      const mod=await import('firebase/firestore');
+                      const {id,_col,...rest}=selected;
+                      await mod.addDoc(mod.collection(db,'photographerApplications'),{...rest,submittedAt:mod.serverTimestamp(),status:selected.status||'new',source:'moved_from_crm'});
+                      await mod.deleteDoc(mod.doc(db,'applications',selected.id));
+                      setApplications(prev=>prev.filter(a=>a.id!==selected.id));
+                      await loadPhotographerApps();
+                      setSelected(null);
+                      setActiveTab('photopipeline');
+                    }catch(e){alert('Error: '+e.message);}
+                  }} style={{background:teal,color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:'pointer'}}>? Photo</button>
+                )}
+              </div>
+
+              <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Contact</p>
+                {[
+                  {label:'Email',    value:selected.email},
+                  {label:'WhatsApp', value:selected.whatsapp},
+                  {label:'Applied',  value:selected.createdAt?.seconds?new Date(selected.createdAt.seconds*1000).toLocaleDateString():''},
+                  {label:'Score', value:selected.score?(selected.score+'/100 ? Grade '+(selected.grade||'?')):''},
+                  {label:'Score',    value:selected.score?(selected.score+'/100 ? Grade '+(selected.grade||'?')):''},
+                  {label:'Priority', value:selected.priority||''},
+                ].filter(f=>f.value).map(f=>(
+                  <div key={f.label} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}>
+                    <span style={{color:'#888',fontWeight:600}}>{f.label}</span>
+                    <span style={{color:navy,textAlign:'right',maxWidth:200,wordBreak:'break-all'}}>{f.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Profile</p>
+                {[
+                  {label:'Experience', value:selected.experience},
+                  {label:'English',    value:selected.english},
+                  {label:'Passport',   value:selected.passport},
+                  {label:'Available',  value:selected.availability},
+                ].filter(f=>f.value).map(f=>(
+                  <div key={f.label} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}>
+                    <span style={{color:'#888',fontWeight:600}}>{f.label}</span>
+                    <span style={{color:navy,textAlign:'right',maxWidth:200}}>{f.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {[selected.video1,selected.video2,selected.video3].some(Boolean) && (
+                <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Videos</p>
+                  {[selected.video1,selected.video2,selected.video3].map((v,i)=>v?(
+                    <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}>
+                      <span style={{color:'#888',fontWeight:600}}>Video {i+1}</span>
+                      <a href={v} target="_blank" rel="noopener noreferrer" style={{color:ocean,fontWeight:600,textDecoration:'none'}}>Watch ?</a>
+                    </div>
+                  ):null)}
+                </div>
+              )}
+
+              <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Notes</p>
+                <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} rows={4} placeholder="Add notes..."
+                  style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'1.5px solid #e0e8f4',fontSize:13,outline:'none',resize:'vertical',boxSizing:'border-box',fontFamily:'system-ui'}}/>
+                <button onClick={saveNote} disabled={savingNote} style={{marginTop:8,background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'8px 18px',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                  {savingNote?'Saving...':'Save Note'}
+                </button>
+              </div>
+
+              <button onClick={async()=>{
+                if(!window.confirm('Delete this application?'))return;
+                try{
+                  const mod=await import('firebase/firestore');
+                  const col=selected._col||'applications';
+                  await mod.deleteDoc(mod.doc(db,col,selected.id));
+                  if(col==='photographerApplications'){setPhotographerApps(prev=>prev.filter(a=>a.id!==selected.id));}
+                  else{setApplications(prev=>prev.filter(a=>a.id!==selected.id));}
+                  setSelected(null);
+                }catch(e){alert('Error: '+e.message);}
+              }} style={{width:'100%',background:'#fff0f0',color:'#e85d4a',border:'1px solid #fdd',borderRadius:10,padding:10,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                Delete Application
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* EMAIL MODAL */}
+      {emailModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(10,22,40,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:560,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+              <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Email ? {emailModal.fullName||emailModal.name}</h3>
+              <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Email ? {emailModal.fullName||emailModal.name}</h3>
+              <button onClick={()=>setEmailModal(null)} style={{background:'#f0f4fb',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer'}}>?</button>
+            </div>
+            <div style={{marginBottom:16}}>
+              <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Templates</p>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {[
+                  {k:'sb',   l:'Starboard Info',   s:'Starboard Cruise Services - Information', b:getSBBody(emailModal.fullName||emailModal.name||'')},
+                  {k:'vid',  l:'Mandatory Video',  s:'Starboard Mandatory Video Presentation', b:getVideoEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'omn',  l:'Omnia Assessment', s:'Omnia Personality Assessment - Starboard', b:getOmniaEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'visa', l:'C1/D Visa',        s:'C1/D Visa Application Guide - Selective Crew', b:getVisaEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'prep', l:'Final Prep',       s:'Final Interview Preparation - Must Watch', b:getFinalPrepEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'ncl',  l:'NCL Photographer', s:'NCL Shipboard Photographer Opportunity', b:getNclPhotoBody(emailModal.fullName||emailModal.name||'')},
+                  {k:'security', l:'Security Awareness', s:'Security Awareness Course - Mandatory Requirement', b:getSecurityEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'stcw', l:'Basic STCW', s:'Basic STCW Course - Virgin Voyages Mandatory Requirement', b:getSTCWEmail(emailModal.fullName||emailModal.name||'')},
+                ].map(t=>(
+                  <button key={t.k} onClick={()=>{setEmailSubject(t.s);setEmailBody(t.b);}}
+                    style={{padding:'5px 12px',background:'#f0f7ff',color:ocean,border:'1px solid #bfdbfe',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>{t.l}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:10}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>To</label><input value={emailModal.email||''} readOnly style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,background:'#f8fafc',boxSizing:'border-box'}}/></div>
+            <div style={{marginBottom:10}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>CC</label><input value={emailCc} onChange={e=>setEmailCc(e.target.value)} placeholder="CC (optional)" style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+            <div style={{marginBottom:10}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Subject</label><input value={emailSubject} onChange={e=>setEmailSubject(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+            <div style={{marginBottom:14}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Message</label><textarea value={emailBody} onChange={e=>setEmailBody(e.target.value)} rows={8} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none',resize:'vertical',fontFamily:'system-ui'}}/></div>
+            {emailResult && <div style={{background:emailResult.includes('Failed')?'#fef2f2':'#f0fdf9',border:'1px solid '+(emailResult.includes('Failed')?'#fca5a5':'#bbf7d0'),borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:emailResult.includes('Failed')?'#991b1b':'#16a34a'}}>{emailResult}</div>}
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setEmailModal(null)} style={{flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+              <button disabled={sendingEmail} onClick={async()=>{
+                if(!emailSubject||!emailBody){alert('Enter subject and message.');return;}
+                setSendingEmail(true);setEmailResult('');
+                try{
+                  const isHtml=emailBody.trim().startsWith('<');
+                  const res=await fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:emailModal.email,subject:emailSubject,text:isHtml?emailBody.replace(/<[^>]*>/g,''):emailBody,html:isHtml?emailBody:null,cc:emailCc||''})});
+                  const data=await res.json();
+                  if(data.success){setEmailResult('Sent!');setTimeout(()=>setEmailModal(null),1500);}
+                  else setEmailResult('Failed: '+(data.error||'Unknown'));
+                }catch(e){setEmailResult('Failed: '+e.message);}
+                setSendingEmail(false);
+              }} style={{flex:2,background:sendingEmail?'#ccc':ocean,color:'#fff',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:700,cursor:'pointer'}}>
+                {sendingEmail?'Sending...':'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CALENDAR MODAL */}
+      {calendarModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(10,22,40,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:420,boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Schedule Interview</h3>
+              <button onClick={()=>setCalendarModal(null)} style={{background:'#f0f4fb',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer'}}>?</button>
+            </div>
+            <p style={{fontSize:14,fontWeight:600,color:navy,marginBottom:16}}>{calendarModal.fullName}</p>
+            <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Date</label><input type="date" value={calendarDate} onChange={e=>setCalendarDate(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+              <div><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Time</label><input type="time" value={calendarTime} onChange={e=>setCalendarTime(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+              <div><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Duration (min)</label>
+                <select value={calendarDuration} onChange={e=>setCalendarDuration(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none',background:'#fff'}}>
+                  <option value="30">30</option><option value="45">45</option><option value="60">60</option><option value="90">90</option>
+                </select>
+              </div>
+            </div>
+            {scheduleSuccess && <div style={{background:'#f0fdf9',border:'1px solid #bbf7d0',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#16a34a'}}>{scheduleSuccess}</div>}
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setCalendarModal(null)} style={{flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+              <button disabled={schedulingInterview} onClick={async()=>{
+                if(!calendarDate||!calendarTime){alert('Select date and time.');return;}
+                setSchedulingInterview(true);
+                try{
+                  const startDT=new Date(calendarDate+'T'+calendarTime+':00');
+                  const endDT=new Date(startDT.getTime()+parseInt(calendarDuration)*60000);
+                  const res=await fetch('/api/gmail?action=create-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({summary:'Interview: '+calendarModal.fullName,startTime:startDT.toISOString(),endTime:endDT.toISOString(),attendeeEmail:calendarModal.email})});
+                  const data=await res.json();
+                  if(data.success){
+                    setScheduleSuccess('Scheduled! '+(data.meetLink||''));
+                    await moveCandidate(calendarModal.id,'preinterview');
+                    await updateDoc(doc(db,'applications',calendarModal.id),{interviewDate:calendarDate,interviewTime:calendarTime,meetLink:data.meetLink||''});
+                    setTimeout(()=>{setCalendarModal(null);setScheduleSuccess('');},3000);
+                  }else{alert('Failed: '+(data.error||'Unknown'));}
+                }catch(e){alert('Failed: '+e.message);}
+                setSchedulingInterview(false);
+              }} style={{flex:2,background:schedulingInterview?'#ccc':'#8b5cf6',color:'#fff',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:700,cursor:'pointer'}}>
+                {schedulingInterview?'Scheduling...':'Schedule Interview'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`.admin-kanban::-webkit-scrollbar{height:6px;}.admin-kanban::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}`}</style>
+    </div>
+  );
+}

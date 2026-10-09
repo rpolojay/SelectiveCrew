@@ -1,0 +1,21 @@
+{
+  "hosting": {
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "predeploy": ["node scripts/check-deploy-artifact.js"],
+    "frameworksBackend": {
+      "region": "us-east4", "timeoutSeconds": 60, "memory": "1GiB",
+      "secrets": ["FB_ADMIN_PRIVATE_KEY", "FB_ADMIN_CLIENT_EMAIL", "RESEND_API_KEY", "GOOGLE_CLIENT_SECRET"]
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

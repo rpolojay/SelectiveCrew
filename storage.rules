@@ -1,0 +1,46 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email_verified == true && !('clientSlug' in request.auth.token) && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email_verified == true && request.auth.token.email in [
+          'careers@selectivecrew.com', 'rpolo@selectivecrew.com'
+        ])
+      );
+    }
+    match /cvs/{fileName} {
+      // Applications upload through Firebase Storage's object get endpoint
+      // to obtain their download URL; deny bucket listings to prevent CV enumeration.
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      allow update, delete: if isAdmin();
+    }
+    match /candidate-documents/{applicationId}/{fileName} {
+      allow read: if isAdmin() || (request.auth != null &&
+        ('candidateDocumentId' in request.auth.token) && request.auth.token.candidateDocumentId == applicationId);
+      allow create, update: if isAdmin() || (request.auth != null &&
+        ('candidateDocumentId' in request.auth.token) &&
+        request.auth.token.candidateDocumentId == applicationId &&
+        request.resource.size < 10 * 1024 * 1024);
+      allow delete: if isAdmin();
+    }
+    match /attachments/{fileName} {
+      allow read, write: if isAdmin();
+    }
+    match /documents/{fileName} {
+      allow read, write: if isAdmin();
+    }
+    match /resumes/{userId}/{fileName} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow create, update: if isAdmin() || (request.auth != null && request.auth.uid == userId &&
+        request.resource.size < 10 * 1024 * 1024);
+      allow delete: if isAdmin();
+    }
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

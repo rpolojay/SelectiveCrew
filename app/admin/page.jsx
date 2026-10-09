@@ -1,0 +1,1624 @@
+// v2
+'use client';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, updateDoc, collection, getDocs, query, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { db, auth } from '../../lib/firebase';
+import { isAdminAccount } from '../../lib/adminAccess';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+const storage = getStorage();
+async function gmailFetch(input, options = {}) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Admin sign-in required');
+  const token = await user.getIdToken();
+  return fetch(input, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` } });
+}
+import { getSBBody, getNclPhotoBody, getVideoEmail, getOmniaEmail, getVisaEmail, getFinalPrepEmail, getSecurityEmail, getSTCWEmail, getRCLCELMedicalEmail, getVirginVoyagesMedicalEmail, getSparkVideoEmail, getSelectedStarboardEmail, getCarnivalVirginMedicalEmail, getTrainingInviteEmail, getTrainingCompletionEmail, getRejectionEmail, getFollowUpEmail, getTrainingCourseEmail, getPhotographerDocsEmail, getNclVisaEmail, getStarboardSystemEmail } from '../../lib/emailTemplates';
+
+async function sendAdminEmail(options) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Admin sign-in required');
+  const token = await user.getIdToken();
+  return fetch('/api/send-email', {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+}
+
+const navy  = '#0a1628';
+const ocean = '#0e4d8a';
+const gold  = '#c9a84c';
+const teal  = '#0d9488';
+
+const SHIP_CRUISE_LINES = ['Royal Caribbean', 'Celebrity Cruises', 'Princess Cruises', 'Virgin Voyages', 'Carnival Cruise Lines'];
+
+const POSITION_OPTIONS = ['Sales Associate', 'Fine Jewelry Specialist', 'Cruise Ship Assistant Retail Manager', 'Sr Fine Jewelry Ambassador', 'Cruise Ship Retail Sales Manager'];
+
+const COUNTRY_OPTIONS = ['Colombia', 'Peru', 'Ecuador', 'Chile', 'Argentina', 'Panama', 'Dominican Republic', 'Mexico', 'Venezuela', 'Costa Rica', 'Paraguay', 'Uruguay'];
+
+// Read-only labels for the client portal's own drag-and-drop stage field
+// (portalStage). Purely for admin reference - never written from here.
+const PORTAL_STAGE_LABELS = {
+  selected: { label: 'Selected', color: '#7c3aed', bg: '#ddd6fe' },
+  visaapproved: { label: 'Visa Approved', color: '#d97706', bg: '#fde68a' },
+  readypool: { label: 'Ready Pool', color: '#15803d', bg: '#bbf7d0' },
+  assigned: { label: 'Assigned', color: '#0369a1', bg: '#bae6fd' },
+};
+
+const PIPELINE_STAGES = [
+  { key: 'new',          label: 'Applied',       color: '#4f46e5', bg: '#e0e7ff', cardBg: '#eef2ff', border: '#818cf8' },
+  { key: 'reviewing',    label: 'Reviewing',     color: '#0284c7', bg: '#bae6fd', cardBg: '#e0f2fe', border: '#38bdf8' },
+  { key: 'preinterview', label: 'Pre Interview', color: '#db2777', bg: '#fce7f3', cardBg: '#fdf2f8', border: '#f472b6' },
+  { key: 'interviewed',  label: 'Interviewed',   color: '#d97706', bg: '#fde68a', cardBg: '#fffbeb', border: '#fbbf24' },
+  { key: 'shortlisted',  label: 'Shortlisted',   color: '#0d9488', bg: '#99f6e4', cardBg: '#f0fdf9', border: '#2dd4bf' },
+  { key: 'waitingassignment', label: 'Waiting Assignment', color: '#7c3aed', bg: '#ede9fe', cardBg: '#f5f3ff', border: '#a78bfa' },
+  { key: 'offered',      label: 'Offered',       color: '#7c3aed', bg: '#ddd6fe', cardBg: '#f5f3ff', border: '#a78bfa' },
+  { key: 'assigned',     label: 'Assigned',      color: '#0369a1', bg: '#bae6fd', cardBg: '#e0f2fe', border: '#38bdf8' },
+  { key: 'placed',       label: 'Placed',        color: '#15803d', bg: '#bbf7d0', cardBg: '#f0fdf4', border: '#4ade80' },
+  { key: 'placedpaid',   label: 'Placed & Paid', color: '#854d0e', bg: '#fef3c7', cardBg: '#fefce8', border: '#c9a84c' },
+  { key: 'rejected',     label: 'Rejected',      color: '#b91c1c', bg: '#fecaca', cardBg: '#fff5f5', border: '#f87171' },
+];
+
+const PHOTO_PIPELINE_STAGES = [
+  { key: 'new',          label: 'Applied',       color: '#4f46e5', bg: '#e0e7ff', cardBg: '#eef2ff', border: '#818cf8' },
+  { key: 'reviewing',    label: 'Reviewing',     color: '#0284c7', bg: '#bae6fd', cardBg: '#e0f2fe', border: '#38bdf8' },
+  { key: 'preinterview', label: 'Pre Interview', color: '#db2777', bg: '#fce7f3', cardBg: '#fdf2f8', border: '#f472b6' },
+  { key: 'interviewed',  label: 'Interviewed',   color: '#d97706', bg: '#fde68a', cardBg: '#fffbeb', border: '#fbbf24' },
+  { key: 'shortlisted',  label: 'Shortlisted',   color: '#0d9488', bg: '#99f6e4', cardBg: '#f0fdf9', border: '#2dd4bf' },
+  { key: 'waitingassignment', label: 'Waiting Assignment', color: '#7c3aed', bg: '#ede9fe', cardBg: '#f5f3ff', border: '#a78bfa' },
+  { key: 'offered',      label: 'Offered',       color: '#7c3aed', bg: '#ddd6fe', cardBg: '#f5f3ff', border: '#a78bfa' },
+  { key: 'assigned',     label: 'Assigned',      color: '#0369a1', bg: '#bae6fd', cardBg: '#e0f2fe', border: '#38bdf8' },
+  { key: 'placed',       label: 'Placed',        color: '#15803d', bg: '#bbf7d0', cardBg: '#f0fdf4', border: '#4ade80' },
+  { key: 'placedpaid',   label: 'Placed & Paid', color: '#854d0e', bg: '#fef3c7', cardBg: '#fefce8', border: '#c9a84c' },
+  { key: 'rejected',     label: 'Rejected',      color: '#b91c1c', bg: '#fecaca', cardBg: '#fff5f5', border: '#f87171' },
+];
+
+const EMBARKED_STATUSES = ['assigned', 'placed', 'placedpaid'];
+const NO_DATE_KEY = '__nodate__';
+
+// Small set of common source-country -> ISO code mappings for the flag
+// column. Falls back to no flag (just the country name) if unmapped.
+const COUNTRY_CODES = {
+  philippines: 'PH', indonesia: 'ID', india: 'IN', colombia: 'CO', mexico: 'MX',
+  honduras: 'HN', jamaica: 'JM', 'south africa': 'ZA', 'dominican republic': 'DO',
+  peru: 'PE', ecuador: 'EC', brazil: 'BR', argentina: 'AR', chile: 'CL', panama: 'PA',
+  'costa rica': 'CR', guatemala: 'GT', 'el salvador': 'SV', nicaragua: 'NI',
+  venezuela: 'VE', nigeria: 'NG', ghana: 'GH', kenya: 'KE', vietnam: 'VN',
+  thailand: 'TH', 'sri lanka': 'LK', nepal: 'NP', bangladesh: 'BD', ukraine: 'UA',
+  romania: 'RO', poland: 'PL', serbia: 'RS', turkey: 'TR', egypt: 'EG', morocco: 'MA',
+  'united states': 'US', usa: 'US', 'united kingdom': 'GB', uk: 'GB', canada: 'CA',
+  australia: 'AU', spain: 'ES', portugal: 'PT', italy: 'IT', greece: 'GR',
+  bulgaria: 'BG', croatia: 'HR', hungary: 'HU', 'czech republic': 'CZ', slovakia: 'SK',
+  russia: 'RU', china: 'CN', malaysia: 'MY', myanmar: 'MM', cambodia: 'KH',
+};
+function countryFlag(country) {
+  if (!country) return '';
+  const code = COUNTRY_CODES[String(country).trim().toLowerCase()];
+  if (!code) return '';
+  return code.replace(/./g, ch => String.fromCodePoint(127397 + ch.charCodeAt(0)));
+}
+const MONTH_INDEX = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+const MONTH_RE = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\.?';
+// Builds a local-midnight date and rejects impossible ones (e.g. 31/02, 25/13)
+// instead of letting JS roll them over into a later month/year.
+function makeLocalDate(y, m, d) {
+  const dt = new Date(y, m, d);
+  return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d ? dt : null;
+}
+// Parses a single date value. Everything is built in local time so
+// "2026-10-01" doesn't show as Sep 30 in timezones west of UTC.
+// Slash/dot/dash numeric dates are read as DD/MM/YYYY.
+function parseDateValue(v) {
+  if (!v) return null;
+  if (typeof v.toDate === 'function') v = v.toDate();
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return makeLocalDate(+m[1], +m[2] - 1, +m[3]);
+  m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
+  if (m) return makeLocalDate(+m[3], +m[2] - 1, +m[1]);
+  m = s.match(new RegExp('^(' + MONTH_RE + ')\\s+(\\d{1,2}),?\\s+(\\d{4})$', 'i'));
+  if (m) return makeLocalDate(+m[3], MONTH_INDEX[m[1].slice(0, 3).toLowerCase()], +m[2]);
+  m = s.match(new RegExp('^(\\d{1,2})\\s+(' + MONTH_RE + '),?\\s+(\\d{4})$', 'i'));
+  if (m) return makeLocalDate(+m[3], MONTH_INDEX[m[2].slice(0, 3).toLowerCase()], +m[1]);
+  return null;
+}
+// Only picks up dates explicitly labeled as embarkation/joining in notes,
+// e.g. "Embarkation date: 12/10/2026", "joining on Oct 12, 2026", "Embarks - 2026-10-12".
+const LABELED_NOTES_DATE_RE = new RegExp(
+  '\\b(?:embark(?:ation|ing|ed|s)?|join(?:ing|s)?)\\s*(?:date\\s*)?(?:[:\\-–]|on\\b)?\\s*(' +
+  '\\d{4}-\\d{1,2}-\\d{1,2}|\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]\\d{4}|' +
+  MONTH_RE + '\\s+\\d{1,2},?\\s+\\d{4}|\\d{1,2}\\s+' + MONTH_RE + ',?\\s+\\d{4})', 'i');
+function extractDateFromNotes(notes) {
+  if (!notes) return null;
+  const m = String(notes).match(LABELED_NOTES_DATE_RE);
+  return m ? parseDateValue(m[1]) : null;
+}
+function getEmbarkDate(a) {
+  for (const v of [a.embarkationDate, a.joiningDate, a.assignmentDate]) {
+    const d = parseDateValue(v);
+    if (d) return d;
+  }
+  return extractDateFromNotes(a.notes);
+}
+function toYmd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function monthKeyOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function monthLabel(key) {
+  if (key === NO_DATE_KEY) return 'No Date Set';
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+function shiftMonthKey(key, delta) {
+  if (key === NO_DATE_KEY) return key;
+  const [y, m] = key.split('-').map(Number);
+  return monthKeyOf(new Date(y, m - 1 + delta, 1));
+}
+function csvEscape(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+function exportEmbarkedCsv(monthKey, list, clientsList) {
+  const header = ['Name', 'Position', 'Client', 'Ship', 'Country', 'Embarkation Date', 'Status'];
+  const rows = list.map(a => {
+    const d = getEmbarkDate(a);
+    const clientSlug = a.portalClientSlug || a.cruiseLine;
+    const clientName = a.shipCruiseLine || (clientsList.find(c => c.id === clientSlug) || {}).name || clientSlug || '';
+    return [a.fullName || '', a.position || '', clientName, a.ship || '', a.country || '', d ? toYmd(d) : '', a.status || ''];
+  });
+  const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = 'embarked-' + monthKey + '.csv';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function getStageEmail(candidate, newStatus) {
+  const name = (candidate.fullName || '').split(' ')[0] || 'there';
+  const emails = {
+    reviewing:    { subject: 'We are reviewing your application - Selective Crew', text: 'Hi ' + name + ',\n\nWe are reviewing your profile and will respond within 3-5 business days.\n\nBest regards,\nSelective Crew' },
+    preinterview: { subject: 'You have been selected for an interview - Selective Crew', text: 'Hi ' + name + ',\n\nCongratulations! You have been selected for an interview.\n\nBest regards,\nSelective Crew' },
+    interviewed:  { subject: 'Thank you for your interview - Selective Crew', text: 'Hi ' + name + ',\n\nThank you for interviewing. We will be in touch within 3-5 days.\n\nBest regards,\nSelective Crew' },
+    shortlisted:  { subject: 'You have been shortlisted - Selective Crew', text: 'Hi ' + name + ',\n\nGreat news! You have been shortlisted. Stay close to your WhatsApp!\n\nBest regards,\nSelective Crew' },
+    offered:      { subject: 'Job offer - Selective Crew', text: 'Hi ' + name + ',\n\nCongratulations! You have received a job offer. We will contact you via WhatsApp.\n\nBest regards,\nSelective Crew' },
+    placed:       { subject: 'You are officially placed - Welcome aboard!', text: 'Hi ' + name + ',\n\nCongratulations - you are officially placed! Welcome to the Selective Crew family!\n\nBest regards,\nSelective Crew' },
+    rejected:     { subject: 'Your application update - Selective Crew', text: 'Hi ' + name + ',\n\nThank you for your interest. We will not be moving forward at this time.\n\nBest regards,\nSelective Crew' },
+  };
+  return emails[newStatus] || null;
+}
+export default function AdminPage() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [applications, setApplications] = useState([]);
+  const [photographerApps, setPhotographerApps] = useState([]);
+  const [placements, setPlacements] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [trainingSessions, setTrainingSessions] = useState([]);
+  const [trainingLeads, setTrainingLeads] = useState([]);
+  const [fastTrackApps, setFastTrackApps] = useState([]);
+  const [candidateDocs, setCandidateDocs] = useState([]);
+  const [assignmentEmails, setAssignmentEmails] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [activeTab, setActiveTab] = useState('pipeline');
+  const [search, setSearch] = useState('');
+  const [noteText, setNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [clientAssignStatus, setClientAssignStatus] = useState('');
+  const [shipCruiseLineStatus, setShipCruiseLineStatus] = useState('');
+  const [positionStatus, setPositionStatus] = useState('');
+  const [icimsIdStatus, setIcimsIdStatus] = useState('');
+  const [countryStatus, setCountryStatus] = useState('');
+  const [joiningDateStatus, setJoiningDateStatus] = useState('');
+  const [movingPipeline, setMovingPipeline] = useState(false);
+  const [moveResult, setMoveResult] = useState('');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [tpGrade, setTpGrade] = useState('all');
+  const [docUploading, setDocUploading] = useState(false);
+  const [docFolder, setDocFolder] = useState('All');
+  const [docUploadFolder, setDocUploadFolder] = useState('Other');
+  const [docUploadProgress, setDocUploadProgress] = useState('');
+  const [libPickerOpen, setLibPickerOpen] = useState(false);
+  const [touchDragging, setTouchDragging] = useState(null);
+  const [touchOverStage, setTouchOverStage] = useState(null);
+  const [tpCandidates, setTpCandidates] = useState([]);
+  const tpFiltered = tpGrade==='all' ? tpCandidates : tpCandidates.filter(c=>c.grade===tpGrade);
+  const [emailModal, setEmailModal] = useState(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailHtml, setEmailHtml] = useState('');
+  const [emailCcList, setEmailCcList] = useState([]);
+  const [emailAttachments, setEmailAttachments] = useState([]);
+  const [editingCandidateEmail, setEditingCandidateEmail] = useState(false);
+  const [candidateEmailDraft, setCandidateEmailDraft] = useState('');
+  const [emailCcInput, setEmailCcInput] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [emailResult, setEmailResult] = useState('');
+  const [calendarModal, setCalendarModal] = useState(null);
+  const [calendarDate, setCalendarDate] = useState('');
+  const [calendarTime, setCalendarTime] = useState('10:00');
+  const [calendarDuration, setCalendarDuration] = useState('60');
+  const [schedulingInterview, setSchedulingInterview] = useState(false);
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
+  const [calendarCc, setCalendarCc] = useState('careers@selectivecrew.com');
+  const [calendarEmail, setCalendarEmail] = useState('');
+  const [bulkEmailSubject, setBulkEmailSubject] = useState('');
+  const [bulkEmailBody, setBulkEmailBody] = useState('');
+  const [sendingBulk, setSendingBulk] = useState(false);
+  const [batchScheduleModal, setBatchScheduleModal] = useState(false);
+  const [batchDate, setBatchDate] = useState('');
+  const [batchStartTime, setBatchStartTime] = useState('09:00');
+  const [batchCandidates, setBatchCandidates] = useState([]);
+  const [batchScheduling, setBatchScheduling] = useState(false);
+  const [batchResults, setBatchResults] = useState([]);
+  const [dragging, setDragging] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
+  const [photoDragging, setPhotoDragging] = useState(null);
+  const [photoDragOver, setPhotoDragOver] = useState(null);
+  const [assignmentSyncing, setAssignmentSyncing] = useState(false);
+  const [assignmentError, setAssignmentError] = useState('');
+  const [sendingTestimonials, setSendingTestimonials] = useState(false);
+  const [testimonialResult, setTestimonialResult] = useState('');
+  const [sendingReport, setSendingReport] = useState(false);
+  const [reportResult, setReportResult] = useState('');
+  const [gmailSyncLoading, setGmailSyncLoading] = useState(false);
+  const [showAddCandidate, setShowAddCandidate] = useState(false);
+  const [newCandidate, setNewCandidate] = useState({fullName:'',email:'',whatsapp:'',country:'',position:''});
+  const [addingCandidate, setAddingCandidate] = useState(false);
+  const [editingGmailId, setEditingGmailId] = useState(null);
+  const [editingGmailEmail, setEditingGmailEmail] = useState('');
+  const [gmailSyncError, setGmailSyncError] = useState('');
+  const [gmailEmails, setGmailEmails] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [embarkedMonth, setEmbarkedMonth] = useState(() => { const n = new Date(); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0'); });
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) { setUser(null); setLoading(false); return; }
+      if (!(await isAdminAccount(u))) {
+        await signOut(auth);
+        setUser(null); setLoginError('This account does not have admin access.'); setLoading(false);
+        return;
+      }
+      setUser(u); setLoading(false);
+      loadApplications(); loadPhotographerApps(); loadClients(); setTimeout(()=>{ loadPlacements(); loadDocuments(); loadTrainingSessions(); loadTrainingLeads(); loadFastTrackApps(); loadCandidateDocs(); loadInquiries(); }, 2000);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => { setClientAssignStatus(''); setShipCruiseLineStatus(''); setIcimsIdStatus(''); setCountryStatus(''); setJoiningDateStatus(''); setMoveResult(''); }, [selected && selected.id]);
+
+  async function loadClients() { try { const snap = await getDocs(collection(db, 'clients')); setClients(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function assignClient(id, clientSlug) {
+    setClientAssignStatus('saving');
+    try {
+      const legacyCruiseLine = ['starboard', 'ncl', 'grandcircle'].includes(clientSlug) ? clientSlug : null;
+      const assignment = { portalClientSlug: clientSlug || null, cruiseLine: legacyCruiseLine, removedFromPortal: false };
+      await updateDoc(doc(db, 'applications', id), assignment);
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, ...assignment } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, ...assignment }));
+      setClientAssignStatus('saved');
+      setTimeout(() => setClientAssignStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('assignClient failed:', e);
+      setClientAssignStatus('error');
+      alert('Error saving client assignment: ' + e.message);
+    }
+  }
+  async function removeFromPortal(id, name) {
+    if (!window.confirm('Remove ' + (name || 'candidate') + ' from client portal?')) return;
+    setClientAssignStatus('saving');
+    try {
+      const assignment = { portalClientSlug: null, cruiseLine: null, removedFromPortal: true };
+      await updateDoc(doc(db, 'applications', id), assignment);
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, ...assignment } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, ...assignment }));
+      setClientAssignStatus('saved');
+      setTimeout(() => setClientAssignStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('removeFromPortal failed:', e);
+      setClientAssignStatus('error');
+      alert('Error removing from portal: ' + e.message);
+    }
+  }
+  async function assignShipCruiseLine(id, shipCruiseLine) {
+    setShipCruiseLineStatus('saving');
+    try {
+      await updateDoc(doc(db, 'applications', id), { shipCruiseLine });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, shipCruiseLine } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, shipCruiseLine }));
+      setShipCruiseLineStatus('saved');
+      setTimeout(() => setShipCruiseLineStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('assignShipCruiseLine failed:', e);
+      setShipCruiseLineStatus('error');
+      alert('Error saving cruise line: ' + e.message);
+    }
+  }
+  async function assignPosition(id, position) {
+    setPositionStatus('saving');
+    try {
+      await updateDoc(doc(db, 'applications', id), { position });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, position } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, position }));
+      setPositionStatus('saved');
+      setTimeout(() => setPositionStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('assignPosition failed:', e);
+      setPositionStatus('error');
+      alert('Error saving position: ' + e.message);
+    }
+  }
+  async function assignCountry(id, country) {
+    setCountryStatus('saving');
+    try {
+      await updateDoc(doc(db, (selected && selected._col) || 'applications', id), { country });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, country } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, country }));
+      setCountryStatus('saved');
+      setTimeout(() => setCountryStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('assignCountry failed:', e);
+      setCountryStatus('error');
+      alert('Error saving country: ' + e.message);
+    }
+  }
+  async function saveIcimsId(id, icims_id) {
+    setIcimsIdStatus('saving');
+    try {
+      await updateDoc(doc(db, 'applications', id), { icims_id });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, icims_id } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, icims_id }));
+      setIcimsIdStatus('saved');
+      setTimeout(() => setIcimsIdStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('saveIcimsId failed:', e);
+      setIcimsIdStatus('error');
+      alert('Error saving iCIMS ID: ' + e.message);
+    }
+  }
+  async function saveJoiningDate(id, joiningDate) {
+    setJoiningDateStatus('saving');
+    try {
+      await updateDoc(doc(db, 'applications', id), { joiningDate });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, joiningDate } : a));
+      if (selected && selected.id === id) setSelected(prev => ({ ...prev, joiningDate }));
+      setJoiningDateStatus('saved');
+      setTimeout(() => setJoiningDateStatus(s => s === 'saved' ? '' : s), 2000);
+    } catch(e) {
+      console.error('saveJoiningDate failed:', e);
+      setJoiningDateStatus('error');
+      alert('Error saving joining date: ' + e.message);
+    }
+  }
+
+  async function loadTalentPool() {
+    try {
+      const snap = await getDocs(query(collection(db, 'applications'), orderBy('createdAt','desc')));
+      const all = snap.docs.map(d=>({id:d.id,...d.data()}));
+      // Include all candidates that have a grade (scored applications)
+      setTpCandidates(all.filter(c=>c.grade));
+    } catch(e) { console.error('Talent pool load error:', e); }
+  }
+  async function loadApplications() {
+    try {
+      const snap = await getDocs(collection(db, 'applications'));
+      const apps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const emailCount = {};
+      apps.forEach(a => { if (a.email) emailCount[a.email] = (emailCount[a.email] || 0) + 1; });
+      setApplications(apps.map(a => ({ ...a, isDuplicate: a.email && emailCount[a.email] > 1 })));
+    } catch(e) { console.error(e); }
+  }
+  async function loadPhotographerApps() { try { const snap = await getDocs(collection(db, 'photographerApplications')); setPhotographerApps(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function loadPlacements() { try { const snap = await getDocs(collection(db, 'placements')); setPlacements(snap.docs.map(d => ({ id: d.id, ...d.data(), fee: parseFloat(d.data().fee) || 0 }))); } catch(e) {} }
+  async function loadDocuments() { try { const snap = await getDocs(collection(db, 'documents')); setDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function loadTrainingSessions() { try { const snap = await getDocs(collection(db, 'trainingSessions')); setTrainingSessions(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function loadTrainingLeads() { try { const snap = await getDocs(collection(db, 'trainingLeads')); setTrainingLeads(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function loadFastTrackApps() { try { const snap = await getDocs(collection(db, 'fastTrackApplications')); setFastTrackApps(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function loadCandidateDocs() { try { const snap = await getDocs(collection(db, 'candidateDocuments')); setCandidateDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+  async function loadInquiries() { try { const snap = await getDocs(collection(db, 'employerInquiries')); setInquiries(snap.docs.map(d => ({ id: d.id, ...d.data() }))); } catch(e) {} }
+
+  async function saveNote() {
+    if (!selected) return;
+    setSavingNote(true);
+    try { await updateDoc(doc(db, selected._col || 'applications', selected.id), { notes: noteText }); setApplications(prev => prev.map(a => a.id === selected.id ? { ...a, notes: noteText } : a)); setSelected(prev => ({ ...prev, notes: noteText })); } catch(e) {}
+    setSavingNote(false);
+  }
+
+  async function moveCandidate(id, newStatus) {
+    const candidate = applications.find(a => a.id === id);
+    const tpl = candidate && getStageEmail(candidate, newStatus);
+    if (tpl && candidate && candidate.email) {
+      const ok = window.confirm('Move ' + (candidate.fullName || 'candidate') + ' to ' + newStatus + '?\n\nSend notification email to ' + candidate.email + '?');
+      if (ok) { try { await sendAdminEmail( { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: candidate.email, cc: 'careers@selectivecrew.com', subject: tpl.subject, text: tpl.text }) }); } catch(e) {} }
+    }
+    try { await updateDoc(doc(db, 'applications', id), { status: newStatus }); setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a)); if (selected && selected.id === id) setSelected(prev => ({ ...prev, status: newStatus })); } catch(e) {}
+  }
+
+  async function moveToPhotoPipeline(candidate) {
+    if (!window.confirm('Move ' + (candidate.fullName || candidate.name || 'this candidate') + ' to the Photographer pipeline?')) return;
+    setMovingPipeline(true);
+    try {
+      const mod = await import('firebase/firestore');
+      const { id, _col, movedToPhoto, ...rest } = candidate;
+      await mod.addDoc(mod.collection(db, 'photographerApplications'), { ...rest, submittedAt: mod.serverTimestamp(), status: candidate.status || 'new', source: 'moved_from_crm' });
+      await mod.updateDoc(mod.doc(db, 'applications', candidate.id), { movedToPhoto: true });
+      setApplications(prev => prev.map(a => a.id === candidate.id ? { ...a, movedToPhoto: true } : a));
+      if (selected && selected.id === candidate.id) setSelected(prev => ({ ...prev, movedToPhoto: true }));
+      await loadPhotographerApps();
+      setMoveResult('Moved to Photo Pipeline');
+      setTimeout(() => setMoveResult(''), 3000);
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
+    setMovingPipeline(false);
+  }
+
+  async function moveToMainPipeline(candidate) {
+    if (!window.confirm('Move ' + (candidate.fullName || candidate.name || 'this candidate') + ' to the Main pipeline?')) return;
+    setMovingPipeline(true);
+    try {
+      const mod = await import('firebase/firestore');
+      const { id, _col, movedToMain, ...rest } = candidate;
+      await mod.addDoc(mod.collection(db, 'applications'), { ...rest, fullName: rest.fullName || rest.name || '', createdAt: mod.serverTimestamp(), status: candidate.status || 'new', source: 'moved_from_photo' });
+      await mod.updateDoc(mod.doc(db, 'photographerApplications', candidate.id), { movedToMain: true });
+      setPhotographerApps(prev => prev.map(a => a.id === candidate.id ? { ...a, movedToMain: true } : a));
+      if (selected && selected.id === candidate.id) setSelected(prev => ({ ...prev, movedToMain: true }));
+      await loadApplications();
+      setMoveResult('Moved to Main Pipeline');
+      setTimeout(() => setMoveResult(''), 3000);
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
+    setMovingPipeline(false);
+  }
+
+  async function sendInterviewReminders() {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const list = applications.filter(a => a.status === 'preinterview' && a.email && a.interviewDate === tomorrowStr);
+    if (!list.length) { alert('No interviews tomorrow.'); return; }
+    if (!window.confirm('Send reminders to ' + list.length + ' candidates?')) return;
+    let sent = 0;
+    for (const c of list) { try { await sendAdminEmail( { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: c.email, subject: 'Reminder: Interview tomorrow - Selective Crew', text: 'Hi ' + ((c.fullName || '').split(' ')[0] || 'there') + ',\n\nYour interview is tomorrow. Be on time, dress professionally, speak English.\n\nSelective Crew' }) }); sent++; } catch(e) {} await new Promise(r => setTimeout(r, 200)); }
+    alert(sent + ' reminders sent!');
+  }
+
+  async function sendTestimonialRequests() {
+    const placed = applications.filter(a => a.status === 'placed' && a.email);
+    if (!placed.length) { alert('No placed candidates found.'); return; }
+    if (!window.confirm('Send testimonial request to ' + placed.length + ' candidates?')) return;
+    setSendingTestimonials(true);
+    let sent = 0;
+    for (const c of placed) { try { await sendAdminEmail( { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: c.email, subject: 'How is life onboard? - Selective Crew', text: 'Hi ' + ((c.fullName || '').split(' ')[0] || 'there') + ',\n\nWould you record a short video sharing your experience and post it on our Facebook page?\n\nhttps://www.facebook.com/selectivecrew/reviews\n\nThank you!\nSelective Crew' }) }); sent++; } catch(e) {} await new Promise(r => setTimeout(r, 200)); }
+    setSendingTestimonials(false); setTestimonialResult('Sent: ' + sent);
+  }
+
+  async function sendWeeklyReport() {
+    setSendingReport(true);
+    try {
+      const now = new Date(); const weekAgo = new Date(now - 7*24*60*60*1000);
+      const thisWeek = applications.filter(a => a.createdAt && a.createdAt.seconds && new Date(a.createdAt.seconds*1000) >= weekAgo).length;
+      const placed = applications.filter(a => a.status === 'placed').length;
+      const stageCounts = {}; applications.forEach(a => { const s = a.status||'new'; stageCounts[s]=(stageCounts[s]||0)+1; });
+      await sendAdminEmail( { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: 'careers@selectivecrew.com', subject: 'Weekly Report - Selective Crew - ' + now.toLocaleDateString(), text: 'WEEKLY REPORT\n\nTotal: ' + applications.length + '\nNew this week: ' + thisWeek + '\nPlaced: ' + placed + '\n\nPipeline:\n' + Object.entries(stageCounts).map(([s,n])=>'  '+s+': '+n).join('\n') + '\n\nGenerated: ' + now.toLocaleString() }) });
+      setReportResult('Report sent!');
+    } catch(e) { setReportResult('Failed: ' + e.message); }
+    setSendingReport(false);
+  }
+
+  async function syncAssignments() {
+    setAssignmentSyncing(true); setAssignmentError('');
+    try { const res = await gmailFetch('/api/gmail?action=assignments'); const data = await res.json(); if (data.error) { setAssignmentError(data.error); } else { setAssignmentEmails(data.emails || []); } } catch(e) { setAssignmentError('Failed: ' + e.message); }
+    setAssignmentSyncing(false);
+  }
+
+  function parseAssignmentSubject(subject) {
+    try {
+      const nameMatch = subject.match(/for\s*-\s*([A-Z][A-Z\s]+?)\s*-\s*[A-Z]\d+/i);
+      const idMatch = subject.match(/([A-Z]\d{4,})/i);
+      const dateMatch = subject.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d+,?\s+\d{4}/i);
+      const fleetMatch = subject.match(/New Hire\s*-\s*(\w+)\s+Joining/i);
+      const shipMatch = subject.match(/[A-Z]\d{4,}\s+(.+?)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+      return { fullName: nameMatch?nameMatch[1].trim():'', employeeId: idMatch?idMatch[1].trim():'', startDate: dateMatch?dateMatch[0].trim():'', fleet: fleetMatch?fleetMatch[1].trim():'', ship: shipMatch?shipMatch[1].trim():'' };
+    } catch(e) { return {}; }
+  }
+
+  async function processAssignment(email) {
+    const parsed = parseAssignmentSubject(email.subject);
+    if (!parsed.fullName) { alert('Could not parse name from: ' + email.subject); return; }
+    const match = applications.find(a => a.fullName && a.fullName.toLowerCase().includes(parsed.fullName.split(' ')[0].toLowerCase()));
+    try {
+      const mod = await import('firebase/firestore');
+      if (match) { await mod.updateDoc(mod.doc(db,'applications',match.id),{status:'assigned',starboardId:parsed.employeeId,ship:parsed.ship,embarkationDate:parsed.startDate,assignedAt:mod.serverTimestamp()}); await loadApplications(); alert('Placed: '+parsed.fullName); }
+      else { await mod.addDoc(mod.collection(db,'applications'),{fullName:parsed.fullName,email:email.email||'',status:'assigned',position:'Retail Sales - Starboard',starboardId:parsed.employeeId,ship:parsed.ship,embarkationDate:parsed.startDate,createdAt:mod.serverTimestamp(),source:'starboard_assignment'}); await loadApplications(); alert('New placement: '+parsed.fullName); }
+      setAssignmentEmails(prev => prev.filter(e => e.id !== email.id));
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function connectGmail() { try { const res = await gmailFetch('/api/gmail?action=auth-url'); const data = await res.json(); if (data.url) window.location.href = data.url; } catch(e) { alert('Failed: ' + e.message); } }
+  async function loadGmailEmails() { setGmailSyncLoading(true); setGmailSyncError(''); try { const res = await gmailFetch('/api/gmail?action=emails'); const data = await res.json(); if (data.error) setGmailSyncError(data.error); else setGmailEmails(data.emails || []); } catch(e) { setGmailSyncError('Failed: ' + e.message); } setGmailSyncLoading(false); }
+  async function importFromGmail(email) { try { const mod = await import('firebase/firestore'); const ref = await mod.addDoc(mod.collection(db,'applications'),{fullName:email.name||'Unknown',email:email.email||'',whatsapp:'',country:'',position:'Imported from Gmail',status:'new',source:'gmail_import',createdAt:mod.serverTimestamp(),notes:'Subject: '+(email.subject||'')}); if(ref && ref.id){ await loadApplications(); setGmailEmails(prev => prev.filter(e => e.id !== email.id)); try { await gmailFetch('/api/gmail?action=remove-label&messageId='+email.id); } catch(e) {} alert('Imported: '+(email.name||email.email)); } else { alert('Import failed - no ref returned'); } } catch(e) { alert('Import error: '+e.message+' | email='+JSON.stringify(email.email)); } }
+
+  const filteredApps = applications.filter(a => !search || (a.fullName||'').toLowerCase().includes(search.toLowerCase()) || (a.email||'').toLowerCase().includes(search.toLowerCase()) || (a.country||'').toLowerCase().includes(search.toLowerCase()));
+
+  const isEmbarkedCandidate = a => EMBARKED_STATUSES.includes(a.status) && !a.removedFromPortal;
+  const embarkedCandidates = applications.filter(a => isEmbarkedCandidate(a) && getEmbarkDate(a));
+  const embarkedNoDateList = applications.filter(a => isEmbarkedCandidate(a) && !getEmbarkDate(a)).slice().sort((x, y) => (x.fullName||'').localeCompare(y.fullName||''));
+  const embarkedByMonth = {};
+  embarkedCandidates.forEach(a => { const key = monthKeyOf(getEmbarkDate(a)); (embarkedByMonth[key] = embarkedByMonth[key] || []).push(a); });
+  const embarkedNow = new Date();
+  const embarkedCurrentMonthKey = monthKeyOf(embarkedNow);
+  const embarkedCurrentYear = String(embarkedNow.getFullYear());
+  const embarkedThisMonthCount = (embarkedByMonth[embarkedCurrentMonthKey] || []).length;
+  const embarkedThisYearCount = embarkedCandidates.filter(a => String(getEmbarkDate(a).getFullYear()) === embarkedCurrentYear).length;
+  const embarkedAllTimeCount = embarkedCandidates.length;
+  const embarkedMonthKeysWithData = Object.keys(embarkedByMonth).sort().reverse();
+  const embarkedMonthOptions = embarkedMonthKeysWithData.includes(embarkedMonth) ? [...embarkedMonthKeysWithData] : [...embarkedMonthKeysWithData, embarkedMonth].sort().reverse();
+  if ((embarkedNoDateList.length > 0 || embarkedMonth === NO_DATE_KEY) && !embarkedMonthOptions.includes(NO_DATE_KEY)) embarkedMonthOptions.push(NO_DATE_KEY);
+  const embarkedOptionCount = k => k === NO_DATE_KEY ? embarkedNoDateList.length : (embarkedByMonth[k] || []).length;
+  const embarkedSelectedList = embarkedMonth === NO_DATE_KEY
+    ? embarkedNoDateList
+    : (embarkedByMonth[embarkedMonth] || []).slice().sort((x, y) => { const dx = getEmbarkDate(x), dy = getEmbarkDate(y); return (dx ? dx.getTime() : 0) - (dy ? dy.getTime() : 0); });
+
+  if (loading) return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}><p>Loading...</p></div>;
+
+  if (!user) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#0a1628,#1a3a5c)'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:'40px 36px',width:360,boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+        <div style={{textAlign:'center',marginBottom:28}}>
+          <div style={{fontSize:32,marginBottom:8}}>&#9875;</div>
+          <p style={{fontSize:15,fontWeight:800,color:navy}}>Selective Crew CRM</p>
+        </div>
+        <input type="email" placeholder="Email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} style={{width:'100%',padding:'11px 14px',border:'1.5px solid #dde5f0',borderRadius:9,fontSize:14,boxSizing:'border-box',outline:'none',marginBottom:12}}/>
+        <input type="password" placeholder="Password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={async e=>{if(e.key==='Enter'){try{await signInWithEmailAndPassword(auth,loginEmail,loginPassword);}catch(err){setLoginError(err.message);}}}} style={{width:'100%',padding:'11px 14px',border:'1.5px solid #dde5f0',borderRadius:9,fontSize:14,boxSizing:'border-box',outline:'none',marginBottom:16}}/>
+        {loginError && <div style={{color:'#991b1b',background:'#fef2f2',padding:'10px',borderRadius:8,fontSize:12,marginBottom:12}}>{loginError}</div>}
+        <button onClick={async()=>{try{await signInWithEmailAndPassword(auth,loginEmail,loginPassword);}catch(err){setLoginError(err.message);}}} style={{width:'100%',background:navy,color:'#fff',border:'none',borderRadius:10,padding:13,fontSize:15,fontWeight:700,cursor:'pointer'}}>Sign In</button>
+      </div>
+    </div>
+  );
+  async function runBatchSchedule() {
+    if (!batchDate || !batchStartTime || batchCandidates.length === 0) {
+      alert('Please select a date, time and at least one candidate.');
+      return;
+    }
+    setBatchScheduling(true);
+    setBatchResults([]);
+    const results = [];
+    for (let i = 0; i < batchCandidates.length; i++) {
+      const candidate = batchCandidates[i];
+      const startDT = new Date(batchDate + 'T' + batchStartTime + ':00');
+      startDT.setMinutes(startDT.getMinutes() + i * 15);
+      const endDT = new Date(startDT.getTime() + 15 * 60000);
+      try {
+        const res = await gmailFetch('/api/gmail?action=create-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary: 'Interview - Duty-Free Sales Associate: ' + candidate.fullName,
+            description: 'Please confirm your attendance by replying to this email. If you are unable to attend at the scheduled time, please let us know as soon as possible so we can reschedule. We look forward to meeting you!\n\nSelective Crew\ncareers@selectivecrew.com\nWhatsApp: +57 318 847 4058',
+            startTime: startDT.toISOString(),
+            endTime: endDT.toISOString(),
+            attendeeEmail: candidate.email,
+            ccEmail: calendarCc,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          results.push({ name: candidate.fullName, time: startDT.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), status: 'success' });
+          await updateDoc(doc(db, candidate._col || 'applications', candidate.id), { interviewDate: batchDate, interviewTime: batchStartTime, meetLink: data.meetLink || '' });
+        } else {
+          results.push({ name: candidate.fullName, time: startDT.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), status: 'failed' });
+        }
+      } catch(e) {
+        results.push({ name: candidate.fullName, time: startDT.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), status: 'failed' });
+      }
+    }
+    setBatchResults(results);
+    setBatchScheduling(false);
+    // Send summary email
+    try {
+      const scheduled = results.filter(r=>r.status==='success');
+      if (scheduled.length > 0) {
+        const summaryText = 'Batch Interview Schedule Summary\n\n' +
+          scheduled.map(r=>r.time+' - '+r.name).join('\n') +
+          '\n\nDate: '+batchDate+
+          '\n\nTotal scheduled: '+scheduled.length+' interview(s)'+
+          '\n\nSelective Crew Admin';
+        await sendAdminEmail( {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: 'careers@selectivecrew.com',
+            subject: 'Batch Interview Schedule - '+batchDate+' ('+scheduled.length+' interviews)',
+            text: summaryText,
+          }),
+        });
+      }
+    } catch(e) { console.error('Summary email failed:', e); }
+  }
+
+  return (
+    <div style={{minHeight:'100vh',background:'#f0f4fb',fontFamily:'system-ui,sans-serif',display:'flex',flexDirection:'column'}} onClick={()=>setShowMoreMenu(false)}>
+      <style>{`
+        * { box-sizing: border-box; }
+        .touch-dragging { opacity: 0.5; transform: scale(0.95); }
+        .touch-drag-over { border: 2px dashed #0e4d8a !important; background: rgba(14,77,138,0.06) !important; }
+        .touch-dragging { opacity: 0.5; transform: scale(0.95); }
+        .touch-drag-over { border: 2px dashed #0e4d8a !important; background: rgba(14,77,138,0.06) !important; }
+        @media (max-width: 768px) {
+          .admin-header { padding: 0 12px !important; height: 52px !important; }
+          .admin-header-title { font-size: 12px !important; }
+          .admin-header-email { display: none !important; }
+          .admin-tab-bar { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; }
+          .admin-tab-bar::-webkit-scrollbar { display: none !important; }
+          .admin-tab-btn { padding: 12px 10px !important; font-size: 11px !important; white-space: nowrap !important; }
+          .admin-pipeline { flex-direction: row !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; padding-bottom: 16px !important; gap: 12px !important; }
+          .admin-pipeline-col { min-width: 260px !important; max-width: 260px !important; flex-shrink: 0 !important; }
+          .admin-modal { width: 100% !important; max-width: 100% !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; margin: 0 !important; overflow-y: auto !important; }
+          .admin-modal-wrap { align-items: flex-end !important; padding: 0 !important; }
+          .admin-candidate-card { padding: 12px !important; }
+          .cand-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent; user-select: none; }
+          .cand-card:active { transform: scale(0.97); }
+          @media (max-width: 768px) {
+            .cand-card { min-height: 72px; padding: 14px !important; margin-bottom: 10px !important; border-radius: 14px !important; }
+            .cand-card:active { transform: scale(0.96); background: #e8f0fb !important; }
+            .move-btn { display: flex !important; }
+          }
+          @media (min-width: 769px) { .move-btn { display: none !important; } }
+          .admin-search-bar { flex-direction: column !important; gap: 8px !important; }
+          .admin-search-bar input { width: 100% !important; }
+          .admin-content { padding: 12px !important; }
+          .admin-email-modal { width: 100% !important; max-width: 100% !important; border-radius: 16px 16px 0 0 !important; max-height: 92vh !important; overflow-y: auto !important; }
+          .admin-profile-grid { flex-direction: column !important; }
+          .admin-stats-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+        }
+        @media (max-width: 480px) {
+          .admin-pipeline-col { min-width: 240px !important; }
+          .admin-tab-btn { padding: 10px 8px !important; font-size: 10px !important; }
+        }
+      `}</style>
+      <div className="admin-header" style={{background:navy,padding:'0 20px',display:'flex',alignItems:'center',justifyContent:'space-between',height:56,flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontSize:20}}>&#9875;</span>
+          <div>
+            <p style={{fontSize:13,fontWeight:800,margin:0,color:'#f8f4ec'}}>Selective Crew CRM</p>
+            <p style={{fontSize:10,color:'rgba(255,255,255,0.5)',margin:0}}>{user.email}</p>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:12,color:'rgba(255,255,255,0.5)'}}>{applications.length} candidates</span>
+          <button onClick={()=>signOut(auth)} style={{background:'rgba(255,255,255,0.1)',color:'#fff',border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer'}}>Sign Out</button>
+        </div>
+      </div>
+      <div className="admin-tab-bar" style={{background:'#fff',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,paddingRight:16,overflowX:'auto',overflow:'visible',position:'relative',zIndex:100}}>
+        <div style={{display:'flex',alignItems:'center'}}>
+          {[{key:'pipeline',label:'Pipeline',count:applications.length},{key:'photopipeline',label:'Photo',count:photographerApps.length||null},{key:'list',label:'Candidates',count:applications.length},{key:'talentpool',label:'Talent Pool',count:null},{key:'embarked',label:'Embarked',count:embarkedCandidates.length||null},{key:'batchschedule',label:'📅 Batch Schedule',count:null}].map(tab=>(
+            <button key={tab.key} onClick={()=>{setActiveTab(tab.key);setShowMoreMenu(false);if(tab.key==='talentpool')loadTalentPool();}} className="admin-tab-btn" style={{padding:'14px 14px',fontSize:12,fontWeight:600,background:'none',border:'none',whiteSpace:'nowrap',borderBottom:activeTab===tab.key?'3px solid '+ocean:'3px solid transparent',color:activeTab===tab.key?ocean:'#888',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+              {tab.label}{tab.count!=null&&<span style={{background:activeTab===tab.key?ocean:'#eee',color:activeTab===tab.key?'#fff':'#888',borderRadius:20,padding:'1px 6px',fontSize:10,fontWeight:700}}>{tab.count}</span>}
+            </button>
+          ))}
+          <div style={{position:'relative',zIndex:300}} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>setShowMoreMenu(m=>!m)} style={{padding:'14px 14px',fontSize:12,fontWeight:600,background:'none',border:'none',borderBottom:'3px solid transparent',color:'#888',cursor:'pointer'}}>
+              {showMoreMenu ? 'More ^' : 'More v'}
+            </button>
+            {showMoreMenu&&(
+              <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid #e8eef8',borderRadius:12,boxShadow:'0 8px 32px rgba(14,77,138,0.12)',zIndex:200,minWidth:220,padding:8}}>
+                {[{key:'placements',label:'Placements',count:null},{key:'reports',label:'Reports',count:null},{key:'employers',label:'Employers',count:inquiries.length},{key:'gmail',label:'Gmail Import',count:null},{key:'documents',label:'Doc Library',count:documents.length||null},{key:'training',label:'Training Sessions',count:trainingSessions.length||null},{key:'leads',label:'Email Leads',count:trainingLeads.length||null},{key:'photographer',label:'Photo Apps',count:photographerApps.length||null},{key:'fasttrack',label:'Fast Track Apps',count:fastTrackApps.length||null},{key:'candidatedocs',label:'Candidate Docs',count:candidateDocs.length||null},{key:'assignments',label:'Starboard Assignments',count:assignmentEmails.length||null}].map(tab=>(
+                  <button key={tab.key} onClick={()=>{setActiveTab(tab.key);setShowMoreMenu(false);}} style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'9px 14px',fontSize:13,fontWeight:activeTab===tab.key?700:400,background:activeTab===tab.key?'#f0f7ff':'none',border:'none',borderRadius:8,color:activeTab===tab.key?ocean:'#555',cursor:'pointer'}}>
+                    {tab.label}{tab.count!=null&&tab.count>0&&<span style={{background:ocean,color:'#fff',borderRadius:20,padding:'1px 7px',fontSize:10,fontWeight:700}}>{tab.count}</span>}
+                  </button>
+                ))}
+                <Link href="/admin/clients" style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'9px 14px',fontSize:13,fontWeight:400,color:'#555',borderTop:'1px solid #e8eef8',marginTop:4}}>
+                  Manage Clients{clients.length>0&&<span style={{background:gold,color:navy,borderRadius:20,padding:'1px 7px',fontSize:10,fontWeight:700}}>{clients.length}</span>}
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+        <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{padding:'7px 14px',borderRadius:20,border:'1px solid #e8eef8',fontSize:13,outline:'none',width:180,background:'#f8faff'}}/>
+      </div>
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>        {activeTab==='pipeline'&&(
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+            <div style={{padding:'10px 20px',background:'#fff',borderBottom:'1px solid #e8eef8',display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
+              <span style={{fontSize:12,color:'#888'}}>Pipeline</span>
+              <button onClick={()=>{setShowAddCandidate(true);setNewCandidate({fullName:'',email:'',whatsapp:'',country:'',position:'Imported from Gmail'});}} style={{background:ocean,color:'#fff',border:'none',borderRadius:8,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>+ Add Candidate</button>
+              <button onClick={sendInterviewReminders} style={{marginLeft:'auto',background:'#8b5cf6',color:'#fff',border:'none',borderRadius:8,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Send Interview Reminders</button>
+            </div>
+            <div style={{flex:1,overflowX:'auto',overflowY:'hidden',padding:'20px 16px',display:'flex',gap:14,alignItems:'flex-start'}}>
+              {PIPELINE_STAGES.map(stage=>{
+                const cards=filteredApps.filter(a=>(a.status||'new')===stage.key);
+                const isOver=dragOver===stage.key;
+                return (
+                  <div key={stage.key} onDragOver={e=>{e.preventDefault();setDragOver(stage.key);}} onDrop={async e=>{e.preventDefault();setDragOver(null);if(dragging&&dragging.status!==stage.key){await moveCandidate(dragging.id,stage.key);}setDragging(null);}} onDragLeave={()=>setDragOver(null)}
+                    style={{minWidth:200,width:200,flexShrink:0,background:isOver?'#e0f0ff':'#f8faff',borderRadius:16,border:isOver?'2px dashed '+ocean:'2px solid #e8eef8',transition:'all 0.15s'}}>
+                    <div style={{padding:'12px 14px',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:7}}><div style={{width:9,height:9,borderRadius:'50%',background:stage.color}}/><span style={{fontSize:12,fontWeight:700,color:navy}}>{stage.label}</span></div>
+                      <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'2px 7px',fontSize:11,fontWeight:800}}>{cards.length}</span>
+                    </div>
+                    <div style={{padding:8,display:'flex',flexDirection:'column',gap:7,minHeight:80,maxHeight:'calc(100vh - 220px)',overflowY:'auto'}}>
+                      {cards.length===0&&<div style={{textAlign:'center',padding:'16px 0',color:'#ccc',fontSize:11}}>Drop here</div>}
+                      {cards.map(app=>{
+                        const date=app.createdAt&&app.createdAt.seconds?new Date(app.createdAt.seconds*1000).toLocaleDateString():'';
+                        const isSel=selected&&selected.id===app.id;
+                        return (
+                          <div key={app.id} className={"cand-card"+(touchDragging&&touchDragging.id===app.id?' touch-dragging':'')} draggable onDragStart={e=>{setDragging(app);e.dataTransfer.effectAllowed='move';}} onTouchStart={()=>setTouchDragging(app)} onTouchMove={e=>{e.preventDefault();const t=e.touches[0];const el=document.elementFromPoint(t.clientX,t.clientY);const col=el?.closest('[data-stage]');setTouchOverStage(col?col.getAttribute('data-stage'):null);}} onTouchEnd={async()=>{if(touchDragging&&touchOverStage&&touchOverStage!==touchDragging.status){await moveCandidate(touchDragging.id,touchOverStage);}setTouchDragging(null);setTouchOverStage(null);}} onClick={()=>{if(!touchDragging){setSelected({...app,_col:'applications'});setNoteText(app.notes||'');}}}
+                            style={{background:isSel?'#dbeafe':(stage.cardBg||'#fff'),borderRadius:10,padding:'10px 12px',borderTop:isSel?'2px solid '+ocean:'2px solid '+(stage.border||'#e8eef8'),borderBottom:isSel?'2px solid '+ocean:'2px solid '+(stage.border||'#e8eef8'),borderBottom:isSel?'2px solid '+ocean:'2px solid '+(stage.border||'#e8eef8'),borderBottom:'4px solid '+stage.color,cursor:'pointer',transition:'all 0.15s',opacity:dragging&&dragging.id===app.id?0.4:1}}>
+                            <p style={{fontSize:13,fontWeight:700,color:navy,margin:'0 0 3px'}}>
+                              {app.fullName}{app.sbInterested&&<span style={{marginLeft:5,fontSize:9,fontWeight:800,background:'#d1fae5',color:'#16a34a',borderRadius:4,padding:'1px 5px'}}>SB ✓</span>}{app.videoWatched&&<span style={{marginLeft:3,fontSize:9,fontWeight:800,background:'#fef9c3',color:'#854d0e',borderRadius:4,padding:'1px 5px'}}>VID ✓</span>}{app.omniaCompleted&&<span style={{marginLeft:3,fontSize:9,fontWeight:800,background:'#ede9fe',color:'#6d28d9',borderRadius:4,padding:'1px 5px'}}>OMN ✓</span>}{app.isDuplicate&&<span style={{marginLeft:5,fontSize:9,fontWeight:800,background:'#fef2f2',color:'#dc2626',borderRadius:3,padding:'1px 4px'}}>DUP</span>}
+                            </p>
+                            {(app.portalClientSlug||app.cruiseLine)&&<div style={{marginBottom:4}}><span style={{fontSize:9,fontWeight:800,background:gold,color:navy,borderRadius:4,padding:'1px 6px'}}>{(clients.find(c=>c.id===(app.portalClientSlug||app.cruiseLine))||{}).name||app.portalClientSlug||app.cruiseLine}</span></div>}
+                            {!app.portalClientSlug&&!app.cruiseLine&&app.removedFromPortal&&<div style={{marginBottom:4}}><span style={{fontSize:9,fontWeight:800,background:'#f1f5f9',color:'#64748b',borderRadius:4,padding:'1px 6px'}}>Not in Portal</span></div>}
+                            {app.icims_id&&<div style={{marginBottom:4}}><span style={{fontSize:9,fontWeight:800,background:'#e0e8f4',color:ocean,borderRadius:4,padding:'1px 6px'}}>iCIMS: {app.icims_id}</span></div>}
+                            <p style={{fontSize:11,color:'#888',margin:'0 0 3px'}}>{app.country||''}</p>
+                            <p style={{fontSize:10,color:'#aaa',margin:'0 0 6px'}}>{(app.position||'').substring(0,35)}</p>
+                            {app.notes&&<div style={{background:'rgba(201,168,76,0.1)',borderLeft:'2px solid '+gold,borderRadius:'0 4px 4px 0',padding:'4px 8px',marginBottom:6}}><p style={{fontSize:10,color:'#92400e',margin:0,lineHeight:1.4}}>{app.notes.split('\n')[0].substring(0,60)}{app.notes.split('\n')[0].length>60?'...':''}</p></div>}
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                              <span style={{fontSize:10,color:'#bbb'}}>{date}</span>
+                              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                                {app.grade&&<span style={{fontSize:9,fontWeight:800,background:app.grade==='A'?'#d1fae5':app.grade==='B'?'#dbeafe':app.grade==='C'?'#fef3c7':'#fee2e2',color:app.grade==='A'?'#16a34a':app.grade==='B'?'#1e40af':app.grade==='C'?'#92400e':'#991b1b',borderRadius:3,padding:'1px 4px'}}>{app.grade}</span>}
+                                {app.whatsapp&&<a href={'https://wa.me/'+(app.whatsapp).replace(/\D/g,'')} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{background:'#25D366',color:'#fff',borderRadius:3,padding:'1px 4px',fontSize:9,fontWeight:700,textDecoration:'none'}}>WA</a>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {activeTab==='photopipeline'&&(
+          <div style={{flex:1,overflowX:'auto',overflowY:'hidden',padding:'20px 16px',display:'flex',gap:14,alignItems:'flex-start'}}>
+            {PHOTO_PIPELINE_STAGES.map(stage=>{
+              const cards=photographerApps.filter(a=>(a.status||'new')===stage.key);
+              const isOver=photoDragOver===stage.key;
+              return (
+                <div key={stage.key} onDragOver={e=>{e.preventDefault();setPhotoDragOver(stage.key);}} onDrop={async e=>{e.preventDefault();setPhotoDragOver(null);if(!photoDragging)return;try{const mod=await import('firebase/firestore');await mod.updateDoc(mod.doc(db,'photographerApplications',photoDragging.id),{status:stage.key});loadPhotographerApps();}catch(err){console.error(err);}setPhotoDragging(null);}} onDragLeave={()=>setPhotoDragOver(null)}
+                  style={{minWidth:200,width:200,flexShrink:0,background:isOver?'#e0f0ff':'#f8faff',borderRadius:16,border:isOver?'2px dashed '+ocean:'2px solid #e8eef8'}}>
+                  <div style={{padding:'12px 14px',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:7}}><div style={{width:9,height:9,borderRadius:'50%',background:stage.color}}/><span style={{fontSize:12,fontWeight:700,color:navy}}>{stage.label}</span></div>
+                    <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'2px 7px',fontSize:11,fontWeight:800}}>{cards.length}</span>
+                  </div>
+                  <div style={{padding:8,display:'flex',flexDirection:'column',gap:7,minHeight:80}}>
+                    {cards.length===0&&<div style={{textAlign:'center',padding:'16px 0',color:'#ccc',fontSize:11}}>Drop here</div>}
+                    {cards.map(app=>(
+                      <div key={app.id} draggable onDragStart={e=>{setPhotoDragging(app);e.dataTransfer.effectAllowed='move';}} onClick={()=>{setSelected({...app,_col:'photographerApplications'});setNoteText(app.notes||'');}}
+                        style={{background:stage.cardBg||'#fff',borderRadius:10,padding:'10px 12px',border:'2px solid '+(stage.border||'#e8eef8'),borderLeft:'4px solid '+stage.color,cursor:'pointer',opacity:photoDragging&&photoDragging.id===app.id?0.4:1}}>
+                        <p style={{fontSize:13,fontWeight:700,color:navy,margin:'0 0 3px'}}>{app.name||app.fullName||'Unknown'}</p>
+                        <p style={{fontSize:11,color:'#888',margin:'0 0 3px'}}>{app.country||''}</p>
+                        <p style={{fontSize:10,color:'#aaa',margin:0}}>{app.cameraExperience||'Photographer'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}        {activeTab==='list'&&(
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:900,margin:'0 auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:8}}>
+                <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>All Candidates ({filteredApps.length})</h2>
+                <button onClick={()=>{setBatchCandidates([]);setBatchScheduleModal(true);setBatchResults([]);setBatchDate('');setBatchStartTime('09:00');}} style={{background:'#f0f7ff',color:'#0e4d8a',border:'1px solid #bfdbfe',borderRadius:8,padding:'7px 16px',fontSize:12,fontWeight:700,cursor:'pointer'}}>📅 Batch Schedule</button>
+                <button onClick={()=>{if(!filteredApps.length)return;const h=['fullName','email','whatsapp','country','position','status','score','grade'];const rows=filteredApps.map(a=>h.map(k=>{const v=a[k];return typeof v==='string'?'"'+v.replace(/"/g,'""')+'"':v??'';}).join(','));const csv=[h.join(','),...rows].join('\n');const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const el=document.createElement('a');el.href=url;el.download='candidates.csv';el.click();}} style={{background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Export CSV</button>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {filteredApps.map(app=>{
+                  const stage=PIPELINE_STAGES.find(s=>s.key===(app.status||'new'))||PIPELINE_STAGES[0];
+                  const date=app.createdAt&&app.createdAt.seconds?new Date(app.createdAt.seconds*1000).toLocaleDateString():'';
+                  return (
+                    <div key={app.id} onClick={()=>{setSelected({...app,_col:'applications'});setNoteText(app.notes||'');}} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',cursor:'pointer',borderLeft:'4px solid '+stage.color}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+                        <div>
+                          <p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>{app.fullName}{app.isDuplicate&&<span style={{marginLeft:8,fontSize:10,fontWeight:800,background:'#fef2f2',color:'#dc2626',borderRadius:6,padding:'2px 7px'}}>DUP</span>}</p>
+                          <p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.email}</p>
+                          <p style={{fontSize:12,color:'#aaa',margin:0}}>{app.country} - {app.position}</p>
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                          <span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>{stage.label}</span>
+                          {app.grade&&<span style={{fontSize:10,fontWeight:800,background:app.grade==='A'?'#d1fae5':app.grade==='B'?'#dbeafe':app.grade==='C'?'#fef3c7':'#fee2e2',color:app.grade==='A'?'#16a34a':app.grade==='B'?'#1e40af':app.grade==='C'?'#92400e':'#991b1b',borderRadius:4,padding:'2px 7px'}}>Grade {app.grade}</span>}
+                          <span style={{fontSize:11,color:'#aaa'}}>{date}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab==='placements'&&(()=>{
+          const placed=applications.filter(a=>a.status==='placed');
+          const totalRevenue=placements.reduce((s,p)=>s+(p.fee||0),0);
+          return (<>
+            <div style={{padding:'12px 24px',background:'#f0fdf4',borderBottom:'1px solid #bbf7d0',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,flexShrink:0}}>
+              <span style={{fontSize:13,fontWeight:700,color:'#16a34a'}}>{placed.length} placed candidates</span>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                {testimonialResult&&<span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{testimonialResult}</span>}
+                <button onClick={sendTestimonialRequests} disabled={sendingTestimonials} style={{background:sendingTestimonials?'#ccc':'#16a34a',color:'#fff',border:'none',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{sendingTestimonials?'Sending...':'Request Testimonials'}</button>
+              </div>
+            </div>
+            <div style={{flex:1,overflowY:'auto',padding:24}}>
+              <div style={{maxWidth:900,margin:'0 auto'}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:24}}>
+                  {[{label:'Total Placed',value:placed.length,color:'#16a34a'},{label:'Total Revenue',value:'$'+totalRevenue.toLocaleString(),color:ocean},{label:'Avg Fee',value:'$'+(placements.length?Math.round(totalRevenue/placements.length).toLocaleString():0),color:'#7c3aed'}].map(s=>(
+                    <div key={s.label} style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}><p style={{fontSize:12,color:'#888',margin:'0 0 8px'}}>{s.label}</p><p style={{fontSize:24,fontWeight:800,color:s.color,margin:0}}>{s.value}</p></div>
+                  ))}
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  {placed.map(app=>(<div key={app.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',borderLeft:'4px solid #16a34a'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                      <div><p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>{app.fullName}</p><p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.country} - {app.position}</p>{app.ship&&<p style={{fontSize:12,color:teal,margin:0}}>Ship: {app.ship} {app.embarkationDate?'- '+app.embarkationDate:''}</p>}</div>
+                      {app.whatsapp&&<a href={'https://wa.me/'+(app.whatsapp).replace(/\D/g,'')} target="_blank" rel="noopener noreferrer" style={{background:'#25D366',color:'#fff',borderRadius:8,padding:'6px 12px',textDecoration:'none',fontSize:12,fontWeight:700}}>WhatsApp</a>}
+                    </div>
+                  </div>))}
+                </div>
+              </div>
+            </div>
+          </>);
+        })()}
+        
+          {activeTab==='talentpool'&&(
+            <div>
+              <div style={{marginBottom:24,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+                <div>
+                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:navy,marginBottom:4}}>Talent Pool</h2>
+                  <p style={{fontSize:13,color:'#64748b'}}>A/B grade candidates ready to present to employers. Updated in real time.</p>
+                </div>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                  {['all','A','B','C'].map(g=>(
+                    <button key={g} onClick={()=>setTpGrade(g)} style={{padding:'7px 16px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                      borderColor:tpGrade===g?ocean:'#e2e8f0',
+                      background:tpGrade===g?ocean:'#fff',
+                      color:tpGrade===g?'#fff':'#64748b'
+                    }}>{g==='all'?'All Grades':('Grade '+g)}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stats bar */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
+                {[
+                  {label:'Total in Pool',value:tpCandidates.length,color:'#4f46e5'},
+                  {label:'Grade A',value:tpCandidates.filter(c=>c.grade==='A').length,color:'#15803d'},
+                  {label:'Grade B',value:tpCandidates.filter(c=>c.grade==='B').length,color:'#854d0e'},
+                  {label:'Grade C',value:tpCandidates.filter(c=>c.grade==='C').length,color:'#b91c1c'},
+                ].map((s,i)=>(
+                  <div key={i} style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'16px',textAlign:'center'}}>
+                    <div style={{fontSize:24,fontWeight:800,color:s.color}}>{s.value}</div>
+                    <div style={{fontSize:11,color:'#64748b',fontWeight:600,marginTop:4}}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Candidate table */}
+              <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:16,overflow:'hidden'}}>
+                <div style={{padding:'14px 20px',borderBottom:'1px solid #e2e8f0',background:'#f8fafc',display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr',gap:8}}>
+                  {['Name','Country','English','Sales Exp','Passport','Grade'].map(h=>(
+                    <div key={h} style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5}}>{h}</div>
+                  ))}
+                </div>
+                {tpFiltered.length===0&&(
+                  <div style={{padding:'40px',textAlign:'center',color:'#94a3b8',fontSize:14}}>
+                    No candidates yet. They will appear here as applications come in with A or B grades.
+                  </div>
+                )}
+                {tpFiltered.map((c,i)=>(
+                  <div key={c.id||i} style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr',gap:8,alignItems:'center',background:i%2===0?'#fff':'#fafbff'}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:navy}}>{c.fullName||c.name||'Unknown'}</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>{c.email||''}</div>
+                    </div>
+                    <div style={{fontSize:12,color:'#475569'}}>{c.country||'—'}</div>
+                    <div style={{fontSize:12,color:'#475569'}}>{c.english||c.englishLevel||'—'}</div>
+                    <div style={{fontSize:12,color:'#475569'}}>{c.salesExp||c.salesExperience||'—'}</div>
+                    <div style={{fontSize:12,color:'#475569'}}>{c.passport||'—'}</div>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{fontSize:11,fontWeight:800,padding:'3px 8px',borderRadius:6,
+                        background:c.grade==='A'?'#dcfce7':c.grade==='B'?'#fef9c3':'#fee2e2',
+                        color:c.grade==='A'?'#15803d':c.grade==='B'?'#854d0e':'#b91c1c'
+                      }}>{c.grade||'?'}</span>
+                      {c.score&&<span style={{fontSize:10,color:'#94a3b8'}}>{c.score}pts</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {tpFiltered.length>0&&(
+                <div style={{marginTop:16,padding:'12px 16px',background:'#f0f7ff',borderRadius:10,fontSize:13,color:'#0e4d8a'}}>
+                  💡 You have <strong>{tpCandidates.filter(c=>c.grade==='A'||c.grade==='B').length} A/B grade candidates</strong> ready to present to employers. 
+                  {' '}<a href="/for-employers" style={{color:ocean,fontWeight:600}}>Share the employer page →</a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab==='reports'&&(()=>{
+          const now=new Date();
+          const weekAgo=new Date(now-7*24*60*60*1000);
+          const monthAgo=new Date(now-30*24*60*60*1000);
+          const thisWeek=applications.filter(a=>a.createdAt&&a.createdAt.seconds&&new Date(a.createdAt.seconds*1000)>=weekAgo).length;
+          const thisMonth=applications.filter(a=>a.createdAt&&a.createdAt.seconds&&new Date(a.createdAt.seconds*1000)>=monthAgo).length;
+          const placed=applications.filter(a=>a.status==='placed').length;
+          const conv=applications.length>0?((placed/applications.length)*100).toFixed(1):0;
+          const countryCounts={};applications.forEach(a=>{const c=a.country||'Unknown';countryCounts[c]=(countryCounts[c]||0)+1;});
+          const topCountries=Object.entries(countryCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+          return (
+            <div style={{flex:1,overflowY:'auto',padding:24}}>
+              <div style={{maxWidth:900,margin:'0 auto'}}>
+                <div style={{background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:12,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+                  <p style={{fontSize:14,fontWeight:700,color:navy,margin:0}}>Weekly Report</p>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    {reportResult&&<span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{reportResult}</span>}
+                    <button onClick={sendWeeklyReport} disabled={sendingReport} style={{background:sendingReport?'#ccc':ocean,color:'#fff',border:'none',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{sendingReport?'Sending...':'Send Weekly Report'}</button>
+                  </div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
+                  {[{label:'Total',value:applications.length,color:'#6366f1'},{label:'This Month',value:thisMonth,color:ocean},{label:'Placed',value:placed,color:'#16a34a'},{label:'Conversion',value:conv+'%',color:'#f59e0b'}].map((k,i)=>(
+                    <div key={i} style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}><p style={{fontSize:10,color:'#aaa',fontWeight:600,textTransform:'uppercase',margin:'0 0 8px'}}>{k.label}</p><p style={{fontSize:26,fontWeight:800,color:k.color,margin:0}}>{k.value}</p></div>
+                  ))}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+                  <div style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}>
+                    <h3 style={{fontSize:14,fontWeight:700,color:navy,marginBottom:14}}>By Country</h3>
+                    {topCountries.map(([country,count])=>(<div key={country} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}><span style={{fontSize:13,color:'#555'}}>{country}</span><span style={{fontSize:12,fontWeight:700,color:ocean}}>{count}</span></div>))}
+                  </div>
+                  <div style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}>
+                    <h3 style={{fontSize:14,fontWeight:700,color:navy,marginBottom:14}}>Pipeline</h3>
+                    {PIPELINE_STAGES.map(s=>{const count=applications.filter(a=>(a.status||'new')===s.key).length;return(<div key={s.key} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:7}}><div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:8,height:8,borderRadius:'50%',background:s.color}}/><span style={{fontSize:12,color:'#555'}}>{s.label}</span></div><span style={{fontSize:12,fontWeight:700,color:s.color}}>{count}</span></div>);})}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}        {activeTab==='employers'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Employer Inquiries ({inquiries.length})</h2>{inquiries.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No inquiries yet.</p>:<div style={{display:'flex',flexDirection:'column',gap:10}}>{inquiries.map(inq=>(<div key={inq.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}><div><p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>{inq.companyName||inq.name||'Unknown'}</p><p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{inq.email}</p><p style={{fontSize:12,color:'#aaa',margin:0}}>{inq.message||''}</p></div>{inq.email&&<a href={'mailto:'+inq.email} style={{background:ocean,color:'#fff',borderRadius:8,padding:'6px 14px',textDecoration:'none',fontSize:12,fontWeight:700}}>Reply</a>}</div>))}</div>}</div></div>)}
+        {activeTab==='gmail'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24,flexWrap:'wrap',gap:12}}><div><h2 style={{fontSize:18,fontWeight:800,color:navy,margin:'0 0 4px'}}>Gmail Import</h2><p style={{fontSize:13,color:'#888',margin:0}}>Import leads labeled "Import to CRM" in Gmail</p></div><div style={{display:'flex',gap:8}}><button onClick={connectGmail} style={{background:navy,color:'#fff',border:'none',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Connect Gmail</button><button onClick={loadGmailEmails} disabled={gmailSyncLoading} style={{background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{gmailSyncLoading?'Loading...':'Sync Emails'}</button></div></div>{gmailSyncError&&<div style={{background:'#fff5f5',border:'1px solid #fecaca',borderRadius:10,padding:'12px 16px',marginBottom:16}}><p style={{fontSize:13,color:'#dc2626',margin:0}}>{gmailSyncError}</p></div>}{gmailEmails.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No emails. Label emails "Import to CRM" in Gmail then click Sync.</p>:<div style={{display:'flex',flexDirection:'column',gap:10}}>{gmailEmails.map(email=>(<div key={email.id} style={{background:'#f8faff',borderRadius:12,padding:'14px 16px',border:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}><div style={{flex:1}}><div style={{fontSize:14,fontWeight:700,color:navy,margin:'0 0 6px'}}>{email.name}</div><div style={{display:'flex',alignItems:'center',gap:8,margin:'0 0 4px',flexWrap:'wrap'}}>{editingGmailId===email.id?(<><input value={editingGmailEmail} onChange={e=>setEditingGmailEmail(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setGmailEmails(prev=>prev.map(em=>em.id===email.id?{...em,email:editingGmailEmail.trim()}:em));setEditingGmailId(null);}if(e.key==='Escape')setEditingGmailId(null);}} autoFocus style={{fontSize:13,padding:'5px 10px',borderRadius:8,border:'2px solid #1a56db',outline:'none',width:220}}/><button onClick={()=>{setGmailEmails(prev=>prev.map(em=>em.id===email.id?{...em,email:editingGmailEmail.trim()}:em));setEditingGmailId(null);}} style={{background:'#1a56db',color:'#fff',border:'none',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Save</button><button onClick={()=>setEditingGmailId(null)} style={{background:'#f0f0f0',color:'#555',border:'none',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Cancel</button></>):(<><span style={{fontSize:13,color:'#555'}}>{email.email}</span><button onClick={()=>{setEditingGmailId(email.id);setEditingGmailEmail(email.email);}} style={{background:'#1a56db',color:'#fff',border:'none',borderRadius:8,padding:'4px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Edit Email</button></>)}</div><div style={{fontSize:11,color:'#aaa'}}>{email.subject}</div></div><div style={{marginLeft:12}}><button onClick={e=>{e.stopPropagation();importFromGmail(email);}} style={{background:teal,color:'#fff',border:'none',borderRadius:8,padding:'7px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>+ Import</button></div></div>))}</div>}</div></div></div>)}
+        {activeTab==='documents'&&(
+  <div style={{flex:1,overflowY:'auto',padding:24}}>
+    <div style={{maxWidth:900,margin:'0 auto'}}>
+      <div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,flexWrap:'wrap',gap:12}}>
+          <div>
+            <h2 style={{fontSize:18,fontWeight:800,color:navy,margin:'0 0 4px'}}>Document Library</h2>
+            <p style={{fontSize:13,color:'#888',margin:0}}>Store and attach documents to candidate emails</p>
+          </div>
+          <button onClick={loadDocuments} style={{background:'#f0f4fb',color:'#555',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Refresh</button>
+        </div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+          {['All','Forms','Templates','Medical','Visa','Training','Other'].map(f=>(
+            <button key={f} onClick={()=>setDocFolder(f)} style={{padding:'6px 14px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',borderColor:docFolder===f?'#0e4d8a':'#e2e8f0',background:docFolder===f?'#0e4d8a':'#fff',color:docFolder===f?'#fff':'#64748b'}}>{f}</button>
+          ))}
+        </div>
+        <div style={{marginBottom:12,display:'flex',alignItems:'center',gap:8}}>
+          <label style={{fontSize:12,fontWeight:600,color:'#555'}}>Upload to:</label>
+          <select value={docUploadFolder} onChange={e=>setDocUploadFolder(e.target.value)} style={{padding:'6px 12px',borderRadius:8,border:'1px solid #e2e8f0',fontSize:12,outline:'none',cursor:'pointer'}}>
+            {['Forms','Templates','Medical','Visa','Training','Other'].map(f=><option key={f} value={f}>{f}</option>)}
+          </select>
+        </div>
+        <div onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='#0e4d8a';e.currentTarget.style.background='#f0f7ff';}} onDragLeave={e=>{e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.background='#fafbff';}} onDrop={async e=>{e.preventDefault();e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.background='#fafbff';const files=Array.from(e.dataTransfer.files);if(!files.length)return;setDocUploading(true);for(const file of files){setDocUploadProgress('Uploading '+file.name+'...');try{const sRef=ref(storage,'documents/'+Date.now()+'_'+file.name);await uploadBytes(sRef,file);const url=await getDownloadURL(sRef);const mod=await import('firebase/firestore');const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(file);});await mod.addDoc(mod.collection(db,'documents'),{name:file.name,url,size:file.size,type:file.type,base64:b64,folder:docUploadFolder,createdAt:mod.serverTimestamp()});}catch(err){alert('Upload error: '+err.message);}}setDocUploading(false);setDocUploadProgress('');loadDocuments();}} style={{border:'2px dashed #e2e8f0',borderRadius:14,padding:'32px',textAlign:'center',background:'#fafbff',marginBottom:24,cursor:'pointer',transition:'all 0.2s'}} onClick={()=>document.getElementById('docFileInput').click()}>
+          <div style={{fontSize:36,marginBottom:8}}>📁</div>
+          <p style={{fontSize:14,fontWeight:600,color:'#64748b',margin:'0 0 4px'}}>{docUploading?docUploadProgress:'Drop files here or click to upload'}</p>
+          <p style={{fontSize:12,color:'#94a3b8',margin:0}}>PDF, DOC, DOCX, JPG, PNG — any file type</p>
+          <input id="docFileInput" type="file" multiple style={{display:'none'}} onChange={async e=>{const files=Array.from(e.target.files);if(!files.length)return;setDocUploading(true);for(const file of files){setDocUploadProgress('Uploading '+file.name+'...');try{const sRef=ref(storage,'documents/'+Date.now()+'_'+file.name);await uploadBytes(sRef,file);const url=await getDownloadURL(sRef);const mod=await import('firebase/firestore');const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(file);});await mod.addDoc(mod.collection(db,'documents'),{name:file.name,url,size:file.size,type:file.type,base64:b64,folder:docUploadFolder,createdAt:mod.serverTimestamp()});}catch(err){alert('Upload error: '+err.message);}}setDocUploading(false);setDocUploadProgress('');loadDocuments();e.target.value='';}}/>
+        </div>
+        {(docFolder==='All'?documents:documents.filter(d=>d.folder===docFolder)).length===0?(<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>{docFolder==='All'?'No documents yet. Upload your first document above.':'No documents in this folder yet.'}</p>):(
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:12}}>
+            {(docFolder==='All'?documents:documents.filter(d=>d.folder===docFolder)).map(d=>{const ext=(d.name||'').split('.').pop().toLowerCase();const icon=ext==='pdf'?'📄':ext==='doc'||ext==='docx'?'📝':ext==='jpg'||ext==='jpeg'||ext==='png'?'🖼️':'📎';const size=d.size?(d.size>1024*1024?(d.size/(1024*1024)).toFixed(1)+'MB':(d.size/1024).toFixed(0)+'KB'):'';return(
+              <div key={d.id} style={{background:'#f8faff',borderRadius:12,padding:'16px',border:'1px solid #e8eef8',display:'flex',flexDirection:'column',gap:8}}>
+                <div style={{fontSize:28}}>{icon}</div>
+                <div style={{fontSize:13,fontWeight:700,color:navy,lineHeight:1.3,wordBreak:'break-word'}}>{d.name}</div>
+                {size&&<div style={{fontSize:11,color:'#94a3b8'}}>{size}</div>}
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:4}}>
+                  <a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,fontWeight:700,color:'#0e4d8a',background:'#f0f7ff',padding:'4px 10px',borderRadius:8,textDecoration:'none'}}>View</a>
+                  <a href={d.url} download={d.name} style={{fontSize:11,fontWeight:700,color:'#15803d',background:'#f0fdf4',padding:'4px 10px',borderRadius:8,textDecoration:'none'}}>Download</a>
+                    <select value={d.folder||'Other'} onChange={async e=>{try{await updateDoc(doc(db,'documents',d.id),{folder:e.target.value});loadDocuments();}catch(err){alert('Error: '+err.message);}}} style={{fontSize:11,fontWeight:700,color:'#0e4d8a',background:'#f0f7ff',padding:'4px 8px',borderRadius:8,border:'1px solid #bfdbfe',cursor:'pointer'}}>
+                      {['Forms','Templates','Medical','Visa','Training','Other'].map(f=><option key={f} value={f}>{f}</option>)}
+                    </select>
+                  <button onClick={async()=>{if(!window.confirm('Delete '+d.name+'?'))return;try{const mod=await import('firebase/firestore');await mod.deleteDoc(mod.doc(db,'documents',d.id));loadDocuments();}catch(err){alert('Error: '+err.message);}}} style={{fontSize:11,fontWeight:700,color:'#dc2626',background:'#fef2f2',padding:'4px 10px',borderRadius:8,border:'none',cursor:'pointer'}}>Delete</button>
+                </div>
+              </div>
+            );})}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+        {activeTab==='training'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Training Sessions ({trainingSessions.length})</h2>{trainingSessions.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No sessions yet.</p>:<div style={{display:'flex',flexDirection:'column',gap:10}}>{trainingSessions.map(s=>(<div key={s.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8'}}><p style={{fontSize:14,fontWeight:700,color:navy,margin:'0 0 4px'}}>{s.fullName||s.name||'Unknown'}</p><p style={{fontSize:12,color:'#888',margin:0}}>{s.email} - {s.country}</p></div>))}</div>}</div></div>)}
+        {activeTab==='leads'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}><h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>Email Leads ({trainingLeads.length})</h2><div style={{display:'flex',gap:8}}><input placeholder="Subject..." value={bulkEmailSubject} onChange={e=>setBulkEmailSubject(e.target.value)} style={{padding:'7px 12px',border:'1px solid #e8eef8',borderRadius:8,fontSize:13,outline:'none',width:150}}/><input placeholder="Message..." value={bulkEmailBody} onChange={e=>setBulkEmailBody(e.target.value)} style={{padding:'7px 12px',border:'1px solid #e8eef8',borderRadius:8,fontSize:13,outline:'none',width:150}}/><button onClick={async()=>{if(!bulkEmailSubject||!bulkEmailBody){alert('Enter subject and message');return;}if(!window.confirm('Send to '+trainingLeads.length+' leads?'))return;setSendingBulk(true);let sent=0;for(const lead of trainingLeads){if(!lead.email)continue;try{await sendAdminEmail({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:lead.email,subject:bulkEmailSubject,text:bulkEmailBody})});sent++;}catch(e){}await new Promise(r=>setTimeout(r,200));}setSendingBulk(false);alert('Sent to '+sent);}} disabled={sendingBulk} style={{background:ocean,color:'#fff',border:'none',borderRadius:8,padding:'7px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{sendingBulk?'Sending...':'Send All'}</button></div></div>{trainingLeads.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No leads yet.</p>:<div style={{display:'flex',flexDirection:'column',gap:8}}>{trainingLeads.map(lead=>(<div key={lead.id} style={{background:'#fff',borderRadius:12,padding:'12px 16px',border:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><p style={{fontSize:13,fontWeight:600,color:navy,margin:'0 0 2px'}}>{lead.email}</p><p style={{fontSize:11,color:'#888',margin:0}}>{lead.country||''}</p></div><button onClick={async()=>{try{await sendAdminEmail({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:lead.email,subject:bulkEmailSubject||'Follow-up',text:bulkEmailBody||'Hi, following up on your interest.'})});alert('Sent!');}catch(e){alert('Error: '+e.message);}}} style={{background:'#f0f4fb',color:ocean,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,fontWeight:600,cursor:'pointer'}}>Email</button></div>))}</div>}</div></div>)}
+        {activeTab==='photographer'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Photographer Applications ({photographerApps.length})</h2>{photographerApps.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No applications yet.</p>:<div style={{display:'flex',flexDirection:'column',gap:10}}>{photographerApps.map(app=>{const stage=PHOTO_PIPELINE_STAGES.find(s=>s.key===(app.status||'new'))||PHOTO_PIPELINE_STAGES[0];return(<div key={app.id} onClick={()=>{setSelected({...app,_col:'photographerApplications'});setNoteText(app.notes||'');}} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8',cursor:'pointer',borderLeft:'4px solid '+stage.color}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}><div><p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>{app.name||app.fullName||'Unknown'}</p><p style={{fontSize:12,color:'#888',margin:0}}>{app.email} - {app.country}</p></div><span style={{background:stage.bg,color:stage.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>{stage.label}</span></div></div>);})}</div>}</div></div>)}
+        {activeTab==='fasttrack'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:16}}>Fast Track Applications ({fastTrackApps.length})</h2>{fastTrackApps.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No applications yet.</p>:<div style={{display:'flex',flexDirection:'column',gap:10}}>{fastTrackApps.map(app=>(<div key={app.id} style={{background:'#fff',borderRadius:14,padding:'16px 20px',border:'1px solid #e8eef8'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}><div><p style={{fontSize:15,fontWeight:700,color:navy,margin:'0 0 4px'}}>{app.fullName||app.name||'Unknown'}</p><p style={{fontSize:12,color:'#888',margin:'0 0 2px'}}>{app.email} - {app.country}</p></div><div style={{display:'flex',gap:8}}>{!applications.find(x=>x.email===app.email)?(<button onClick={async()=>{try{const mod=await import('firebase/firestore');await mod.addDoc(mod.collection(db,'applications'),{fullName:app.fullName||app.name,email:app.email,whatsapp:app.whatsapp||'',country:app.country||'',position:'Fast Track Assistant Manager - Starboard',status:'new',createdAt:mod.serverTimestamp(),source:'fast_track_form'});await loadApplications();}catch(e){alert('Error: '+e.message);}}} style={{background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>+ Add to CRM</button>):(<button onClick={()=>{const a=applications.find(x=>x.email===app.email);if(a){setSelected(a);setActiveTab('pipeline');}}} style={{background:'#f0f4fb',color:'#555',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer'}}>View in CRM</button>)}<button onClick={async()=>{if(!window.confirm('Delete?'))return;try{const mod=await import('firebase/firestore');await mod.deleteDoc(mod.doc(db,'fastTrackApplications',app.id));loadFastTrackApps();}catch(e){alert('Error: '+e.message);}}} style={{background:'#fef2f2',color:'#dc2626',border:'1px solid #fca5a5',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Delete</button></div></div></div>))}</div>}</div></div>)}
+        {activeTab==='candidatedocs'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:24}}><h2 style={{fontSize:18,fontWeight:800,color:navy,margin:0}}>Candidate Documents ({candidateDocs.length})</h2><button onClick={loadCandidateDocs} style={{background:'#f0f4fb',color:'#555',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Refresh</button></div>{candidateDocs.length===0?<p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>No documents yet.</p>:<div style={{display:'flex',flexDirection:'column',gap:16}}>{candidateDocs.map(cdoc=>{const date=cdoc.submittedAt&&cdoc.submittedAt.seconds?new Date(cdoc.submittedAt.seconds*1000).toLocaleDateString():'N/A';return(<div key={cdoc.id} style={{background:'#f8faff',borderRadius:14,padding:'20px',border:'1px solid #e8eef8'}}><p style={{fontSize:15,fontWeight:800,color:navy,margin:'0 0 4px'}}>{cdoc.fullName}</p><p style={{fontSize:12,color:'#888',margin:'0 0 12px'}}>{cdoc.email} - {cdoc.country} - {date}</p><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:8}}>{Object.entries(cdoc.documents||{}).map(([key,val])=>(<a key={key} href={val.url} target="_blank" rel="noopener noreferrer" style={{display:'flex',alignItems:'center',gap:8,background:'#fff',borderRadius:8,padding:'10px 12px',border:'1px solid #e2e8f0',textDecoration:'none'}}><span style={{fontSize:16}}>doc</span><div><div style={{fontSize:11,fontWeight:700,color:navy,textTransform:'capitalize'}}>{key}</div><div style={{fontSize:10,color:'#94a3b8'}}>{val.name&&val.name.substring(0,20)}</div></div></a>))}</div></div>);})}</div>}</div></div></div>)}
+        {activeTab==='assignments'&&(<div style={{flex:1,overflowY:'auto',padding:24}}><div style={{maxWidth:900,margin:'0 auto'}}><div style={{background:'#fff',borderRadius:20,padding:32,border:'1px solid #e8eef8'}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:24,flexWrap:'wrap',gap:12}}><div><h2 style={{fontSize:18,fontWeight:800,color:navy,margin:'0 0 4px'}}>Starboard Assignments</h2><p style={{fontSize:13,color:'#888',margin:0}}>Emails labeled "Starboard Assignment" in Gmail</p></div><button onClick={syncAssignments} disabled={assignmentSyncing} style={{background:assignmentSyncing?'#ccc':ocean,color:'#fff',border:'none',borderRadius:10,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>{assignmentSyncing?'Syncing...':'Sync Assignments'}</button></div>{assignmentError&&<div style={{background:'#fff5f5',border:'1px solid #fecaca',borderRadius:10,padding:'12px 16px',marginBottom:16}}><p style={{fontSize:13,color:'#dc2626',margin:0}}>{assignmentError}</p></div>}{assignmentEmails.length===0?<div style={{textAlign:'center',padding:'40px 0',color:'#aaa'}}><p style={{fontSize:15,fontWeight:600,margin:0}}>No assignment emails found</p><p style={{fontSize:13,marginTop:4}}>Label Starboard emails as "Starboard Assignment" in Gmail then click Sync</p></div>:<div style={{display:'flex',flexDirection:'column',gap:12}}>{assignmentEmails.map(email=>{const parsed=parseAssignmentSubject(email.subject);return(<div key={email.id} style={{background:'#f8faff',borderRadius:14,padding:'18px 20px',border:'1px solid #e8eef8'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}><div style={{flex:1}}><p style={{fontSize:13,fontWeight:700,color:navy,marginBottom:4}}>{email.subject}</p><p style={{fontSize:12,color:'#888',marginBottom:8}}>{email.date}</p>{parsed.fullName&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:8,marginTop:8}}>{[{label:'Candidate',value:parsed.fullName},{label:'Employee ID',value:parsed.employeeId},{label:'Ship',value:parsed.ship},{label:'Fleet',value:parsed.fleet},{label:'Embarkation',value:parsed.startDate}].filter(f=>f.value).map(f=>(<div key={f.label} style={{background:'#fff',borderRadius:8,padding:'8px 12px',border:'1px solid #e2e8f0'}}><div style={{fontSize:10,fontWeight:700,color:'#aaa',textTransform:'uppercase',marginBottom:2}}>{f.label}</div><div style={{fontSize:13,fontWeight:600,color:navy}}>{f.value}</div></div>))}</div>}</div><button onClick={()=>processAssignment(email)} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:10,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Process Assignment</button></div></div>);})}</div>}</div></div></div>)}
+        {activeTab==='embarked'&&(
+          <div style={{flex:1,overflowY:'auto',padding:24}}>
+            <div style={{maxWidth:1000,margin:'0 auto'}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:24}}>
+                {[{label:'Embarked This Month',value:embarkedThisMonthCount,color:ocean},{label:'Embarked This Year',value:embarkedThisYearCount,color:teal},{label:'Embarked All Time',value:embarkedAllTimeCount,color:gold}].map(s=>(
+                  <div key={s.label} style={{background:'#fff',borderRadius:16,padding:20,border:'1px solid #e8eef8'}}>
+                    <p style={{fontSize:11,color:'#888',fontWeight:600,textTransform:'uppercase',letterSpacing:0.5,margin:'0 0 8px'}}>{s.label}</p>
+                    <p style={{fontSize:26,fontWeight:800,color:s.color,margin:0}}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:'#fff',borderRadius:16,border:'1px solid #e8eef8',overflow:'hidden'}}>
+                <div style={{padding:'16px 20px',borderBottom:'1px solid #e8eef8',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <button onClick={()=>setEmbarkedMonth(shiftMonthKey(embarkedMonth,-1))} disabled={embarkedMonth===NO_DATE_KEY} style={{background:'#f0f4fb',color:navy,border:'none',borderRadius:8,width:32,height:32,fontSize:14,fontWeight:700,cursor:embarkedMonth===NO_DATE_KEY?'default':'pointer',opacity:embarkedMonth===NO_DATE_KEY?0.4:1}}>&larr;</button>
+                    <select value={embarkedMonth} onChange={e=>setEmbarkedMonth(e.target.value)} style={{padding:'8px 14px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:14,fontWeight:700,color:navy,background:'#f8faff',outline:'none',cursor:'pointer'}}>
+                      {embarkedMonthOptions.map(k=>(<option key={k} value={k}>{monthLabel(k)}{embarkedOptionCount(k)?' ('+embarkedOptionCount(k)+')':''}</option>))}
+                    </select>
+                    <button onClick={()=>setEmbarkedMonth(shiftMonthKey(embarkedMonth,1))} disabled={embarkedMonth===NO_DATE_KEY} style={{background:'#f0f4fb',color:navy,border:'none',borderRadius:8,width:32,height:32,fontSize:14,fontWeight:700,cursor:embarkedMonth===NO_DATE_KEY?'default':'pointer',opacity:embarkedMonth===NO_DATE_KEY?0.4:1}}>&rarr;</button>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    <span style={{fontSize:13,fontWeight:700,color:ocean}}>{embarkedSelectedList.length} embarked</span>
+                    <button onClick={()=>exportEmbarkedCsv(embarkedMonth,embarkedSelectedList,clients)} disabled={embarkedSelectedList.length===0} style={{background:embarkedSelectedList.length===0?'#ccc':gold,color:navy,border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:embarkedSelectedList.length===0?'default':'pointer'}}>Export CSV</button>
+                  </div>
+                </div>
+                {embarkedSelectedList.length===0?(
+                  <p style={{color:'#aaa',textAlign:'center',padding:'40px 0'}}>{embarkedMonth===NO_DATE_KEY?'No candidates missing an embarkation date.':'No candidates embarked in '+monthLabel(embarkedMonth)+'.'}</p>
+                ):(
+                  <div style={{display:'flex',flexDirection:'column'}}>
+                    {embarkedSelectedList.map((a,i)=>{
+                      const d=getEmbarkDate(a);
+                      const clientSlug=a.portalClientSlug||a.cruiseLine;
+                      const cruiseLineName=a.shipCruiseLine||(clients.find(c=>c.id===clientSlug)||{}).name||clientSlug||'';
+                      return (
+                        <div key={a.id} style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,background:i%2===0?'#fff':'#fafbff'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
+                            {countryFlag(a.country)&&<span style={{fontSize:20,flexShrink:0}}>{countryFlag(a.country)}</span>}
+                            <div style={{minWidth:0}}>
+                              <p style={{fontSize:14,fontWeight:700,color:navy,margin:'0 0 2px'}}>{a.fullName||'Unknown'}</p>
+                              <p style={{fontSize:12,color:'#888',margin:0}}>{a.position||'—'}{cruiseLineName?' · '+cruiseLineName:''}{a.ship?' · '+a.ship:''}</p>
+                            </div>
+                          </div>
+                          <div style={{textAlign:'right',flexShrink:0}}>
+                            <p style={{fontSize:12,fontWeight:700,color:d?teal:'#aaa',margin:'0 0 2px'}}>{d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'No date set'}</p>
+                            <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:10,background:a.status==='placedpaid'?'#fef3c7':a.status==='placed'?'#bbf7d0':'#bae6fd',color:a.status==='placedpaid'?'#854d0e':a.status==='placed'?'#15803d':'#0369a1'}}>{a.status==='placedpaid'?'Placed & Paid':a.status==='placed'?'Placed':'Assigned'}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {selected&&(activeTab==='pipeline'||activeTab==='list'||activeTab==='photopipeline'||activeTab==='photographer')&&(
+          <div style={{width:360,background:'#fff',borderLeft:'1px solid #e8eef8',overflowY:'auto',flexShrink:0,display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'16px 20px',borderBottom:'1px solid #e8eef8',display:'flex',justifyContent:'space-between',alignItems:'center',background:navy}}>
+              <p style={{fontSize:14,fontWeight:800,color:'#f8f4ec',margin:0}}>Candidate Profile</p>
+              <button onClick={()=>setSelected(null)} style={{background:'rgba(255,255,255,0.15)',color:'#fff',border:'none',borderRadius:6,padding:'4px 10px',cursor:'pointer'}}>X</button>
+            </div>
+            <div style={{padding:20,flex:1}}>
+              <div style={{textAlign:'center',marginBottom:20}}>
+                <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,'+ocean+','+teal+')',color:'#fff',fontSize:20,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px'}}>
+                  {(selected.fullName||selected.name||'?').charAt(0).toUpperCase()}
+                </div>
+                <p style={{fontSize:16,fontWeight:800,color:navy,margin:'0 0 4px'}}>{selected.fullName||selected.name||'Unknown'}</p>
+              </div>
+              <div style={{marginBottom:16}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,margin:0}}>Nationality</p>
+                  {countryStatus==='saving'&&<span style={{fontSize:11,fontWeight:700,color:'#888'}}>Saving...</span>}
+                  {countryStatus==='saved'&&<span style={{fontSize:11,fontWeight:700,color:'#16a34a'}}>Saved ✓</span>}
+                  {countryStatus==='error'&&<span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>Save failed</span>}
+                </div>
+                <select disabled={countryStatus==='saving'} value={selected.country||''} onChange={e=>assignCountry(selected.id,e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:countryStatus==='saving'?'#eef1f5':'#f8fafc',outline:'none',cursor:countryStatus==='saving'?'default':'pointer'}}>
+                  <option value="">Select a country</option>
+                  {COUNTRY_OPTIONS.map(c=><option key={c} value={c}>{c}</option>)}
+                  {selected.country&&!COUNTRY_OPTIONS.includes(selected.country)&&<option value={selected.country}>{selected.country}</option>}
+                </select>
+              </div>
+              {selected._col!=='photographerApplications'&&(
+                <div style={{marginBottom:16}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Pipeline Stage</p>
+                  <select value={selected.status||'new'} onChange={e=>moveCandidate(selected.id,e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:'#f8fafc',outline:'none',cursor:'pointer'}}>
+                    {PIPELINE_STAGES.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
+                </div>
+              )}
+              {selected._col!=='photographerApplications'&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,margin:0}}>Assign to Client</p>
+                    {clientAssignStatus==='saving'&&<span style={{fontSize:11,fontWeight:700,color:'#888'}}>Saving...</span>}
+                    {clientAssignStatus==='saved'&&<span style={{fontSize:11,fontWeight:700,color:'#16a34a'}}>Saved ✓</span>}
+                    {clientAssignStatus==='error'&&<span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>Save failed</span>}
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <select disabled={clientAssignStatus==='saving'} value={selected.portalClientSlug||selected.cruiseLine||''} onChange={e=>assignClient(selected.id,e.target.value)} style={{flex:1,padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:clientAssignStatus==='saving'?'#eef1f5':'#f8fafc',outline:'none',cursor:clientAssignStatus==='saving'?'default':'pointer'}}>
+                      <option value="">Unassigned</option>
+                      {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <button onClick={()=>assignClient(selected.id,selected.portalClientSlug||selected.cruiseLine||'')} disabled={clientAssignStatus==='saving'} style={{background:ocean,color:'#fff',border:'none',borderRadius:9,padding:'0 16px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Save</button>
+                  </div>
+                  {(selected.portalClientSlug||selected.cruiseLine)&&(
+                    <button onClick={()=>removeFromPortal(selected.id,selected.fullName)} disabled={clientAssignStatus==='saving'} style={{marginTop:8,background:'#fef2f2',color:'#dc2626',border:'1px solid #fecaca',borderRadius:9,padding:'7px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Remove from Client Portal</button>
+                  )}
+                  {!selected.portalClientSlug&&!selected.cruiseLine&&selected.removedFromPortal&&(
+                    <div style={{marginTop:8}}><span style={{fontSize:10,fontWeight:800,background:'#f1f5f9',color:'#64748b',borderRadius:4,padding:'2px 8px'}}>Not in Portal</span></div>
+                  )}
+                </div>
+              )}
+              {selected._col!=='photographerApplications'&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,margin:0}}>Cruise Line</p>
+                    {shipCruiseLineStatus==='saving'&&<span style={{fontSize:11,fontWeight:700,color:'#888'}}>Saving...</span>}
+                    {shipCruiseLineStatus==='saved'&&<span style={{fontSize:11,fontWeight:700,color:'#16a34a'}}>Saved ✓</span>}
+                    {shipCruiseLineStatus==='error'&&<span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>Save failed</span>}
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <select disabled={shipCruiseLineStatus==='saving'} value={selected.shipCruiseLine||''} onChange={e=>assignShipCruiseLine(selected.id,e.target.value)} style={{flex:1,padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:shipCruiseLineStatus==='saving'?'#eef1f5':'#f8fafc',outline:'none',cursor:shipCruiseLineStatus==='saving'?'default':'pointer'}}>
+                      <option value="">Unassigned</option>
+                      {SHIP_CRUISE_LINES.map(line=><option key={line} value={line}>{line}</option>)}
+                    </select>
+                    <button onClick={()=>assignShipCruiseLine(selected.id,selected.shipCruiseLine||'')} disabled={shipCruiseLineStatus==='saving'} style={{background:ocean,color:'#fff',border:'none',borderRadius:9,padding:'0 16px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Save</button>
+                  </div>
+                </div>
+              )}
+              {selected._col!=='photographerApplications'&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,margin:0}}>Position</p>
+                    {positionStatus==='saving'&&<span style={{fontSize:11,fontWeight:700,color:'#888'}}>Saving...</span>}
+                    {positionStatus==='saved'&&<span style={{fontSize:11,fontWeight:700,color:'#16a34a'}}>Saved ✓</span>}
+                    {positionStatus==='error'&&<span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>Save failed</span>}
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <select disabled={positionStatus==='saving'} value={selected.position||''} onChange={e=>assignPosition(selected.id,e.target.value)} style={{flex:1,padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:positionStatus==='saving'?'#eef1f5':'#f8fafc',outline:'none',cursor:positionStatus==='saving'?'default':'pointer'}}>
+                      <option value="">Unassigned</option>
+                      {POSITION_OPTIONS.map(p=><option key={p} value={p}>{p}</option>)}
+                      {selected.position&&!POSITION_OPTIONS.includes(selected.position)&&<option value={selected.position}>{selected.position}</option>}
+                    </select>
+                    <button onClick={()=>assignPosition(selected.id,selected.position||'')} disabled={positionStatus==='saving'} style={{background:ocean,color:'#fff',border:'none',borderRadius:9,padding:'0 16px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Save</button>
+                  </div>
+                </div>
+              )}
+              {selected._col!=='photographerApplications'&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,margin:0}}>iCIMS ID</p>
+                    {icimsIdStatus==='saving'&&<span style={{fontSize:11,fontWeight:700,color:'#888'}}>Saving...</span>}
+                    {icimsIdStatus==='saved'&&<span style={{fontSize:11,fontWeight:700,color:'#16a34a'}}>Saved ✓</span>}
+                    {icimsIdStatus==='error'&&<span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>Save failed</span>}
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <input type="text" disabled={icimsIdStatus==='saving'} value={selected.icims_id||''} placeholder="e.g. E154460"
+                      onChange={e=>setSelected(prev=>({...prev,icims_id:e.target.value}))}
+                      onKeyDown={e=>{if(e.key==='Enter')saveIcimsId(selected.id,selected.icims_id||'');}}
+                      style={{flex:1,padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:icimsIdStatus==='saving'?'#eef1f5':'#f8fafc',outline:'none',boxSizing:'border-box'}}/>
+                    <button onClick={()=>saveIcimsId(selected.id,selected.icims_id||'')} disabled={icimsIdStatus==='saving'} style={{background:ocean,color:'#fff',border:'none',borderRadius:9,padding:'0 16px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Save</button>
+                  </div>
+                </div>
+              )}
+              {selected._col!=='photographerApplications'&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,margin:0}}>Joining Date</p>
+                    {joiningDateStatus==='saving'&&<span style={{fontSize:11,fontWeight:700,color:'#888'}}>Saving...</span>}
+                    {joiningDateStatus==='saved'&&<span style={{fontSize:11,fontWeight:700,color:'#16a34a'}}>Saved ✓</span>}
+                    {joiningDateStatus==='error'&&<span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>Save failed</span>}
+                  </div>
+                  <input type="date" disabled={joiningDateStatus==='saving'} value={selected.joiningDate||''}
+                    onChange={e=>saveJoiningDate(selected.id,e.target.value)}
+                    style={{width:'100%',padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,fontSize:13,color:navy,background:joiningDateStatus==='saving'?'#eef1f5':'#f8fafc',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              )}
+              {selected._col!=='photographerApplications'&&selected.portalStage&&(
+                <div style={{marginBottom:16}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Portal Stage <span style={{fontWeight:400,textTransform:'none',letterSpacing:0}}>(set by client, read-only)</span></p>
+                  <div style={{padding:'9px 12px',border:'1.5px solid #e0e8f4',borderRadius:9,background:'#f8fafc'}}>
+                    {(() => { const info = PORTAL_STAGE_LABELS[selected.portalStage]; return info
+                      ? <span style={{background:info.bg,color:info.color,borderRadius:20,padding:'3px 12px',fontSize:12,fontWeight:800}}>{info.label}</span>
+                      : <span style={{fontSize:13,color:navy}}>{selected.portalStage}</span>; })()}
+                  </div>
+                </div>
+              )}
+              <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
+                {selected.email&&<button onClick={()=>{setEmailModal(selected);setEmailSubject('');setEmailBody('');setEmailCcList([]); setEmailCcInput(''); setEmailAttachments([]);setEmailResult('');}} style={{background:ocean,color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:'pointer'}}>Email</button>}
+                {selected.whatsapp&&<a href={'https://wa.me/'+(selected.whatsapp).replace(/\D/g,'')} target="_blank" rel="noopener noreferrer" style={{background:'#25D366',color:'#fff',padding:'8px 14px',borderRadius:20,fontSize:12,fontWeight:700,textDecoration:'none'}}>WhatsApp</a>}
+                <button onClick={()=>{setCalendarEmail((selected && selected.email) || ''); setCalendarModal(selected);setCalendarDate('');setCalendarTime('10:00');setScheduleSuccess('');}} style={{background:'#8b5cf6',color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:'pointer'}}>Schedule</button>
+                {selected._col!=='photographerApplications'
+                  ? <button onClick={()=>moveToPhotoPipeline(selected)} disabled={movingPipeline} style={{background:teal,color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:movingPipeline?'default':'pointer'}}>{movingPipeline?'Moving...':'Move to Photo Pipeline'}</button>
+                  : <button onClick={()=>moveToMainPipeline(selected)} disabled={movingPipeline} style={{background:teal,color:'#fff',padding:'8px 14px',borderRadius:20,border:'none',fontSize:12,fontWeight:700,cursor:movingPipeline?'default':'pointer'}}>{movingPipeline?'Moving...':'Move to Main Pipeline'}</button>}
+              </div>
+              {moveResult&&<div style={{background:'#f0fdf4',color:'#16a34a',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:700,marginBottom:16,textAlign:'center'}}>{moveResult}</div>}
+              <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Contact</p>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}><span style={{color:'#888',fontWeight:600}}>Email</span>{editingCandidateEmail?(<div style={{display:'flex',alignItems:'center',gap:4,flexWrap:'wrap',justifyContent:'flex-end'}}><input value={candidateEmailDraft} onChange={e=>setCandidateEmailDraft(e.target.value)} autoFocus onKeyDown={async e=>{if(e.key==='Enter'){try{const mod=await import('firebase/firestore');await mod.updateDoc(mod.doc(db,selected._col||'applications',selected.id),{email:candidateEmailDraft.trim()});setApplications(prev=>prev.map(a=>a.id===selected.id?{...a,email:candidateEmailDraft.trim()}:a));setSelected(prev=>({...prev,email:candidateEmailDraft.trim()}));}catch(err){alert('Error: '+err.message);}setEditingCandidateEmail(false);}if(e.key==='Escape')setEditingCandidateEmail(false);}} style={{fontSize:12,padding:'3px 8px',borderRadius:6,border:'2px solid #1a56db',outline:'none',width:170}}/><button onClick={async()=>{try{const mod=await import('firebase/firestore');await mod.updateDoc(mod.doc(db,selected._col||'applications',selected.id),{email:candidateEmailDraft.trim()});setApplications(prev=>prev.map(a=>a.id===selected.id?{...a,email:candidateEmailDraft.trim()}:a));setSelected(prev=>({...prev,email:candidateEmailDraft.trim()}));}catch(err){alert('Error: '+err.message);}setEditingCandidateEmail(false);}} style={{background:'#1a56db',color:'#fff',border:'none',borderRadius:6,padding:'3px 8px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Save</button><button onClick={()=>setEditingCandidateEmail(false)} style={{background:'#eee',color:'#555',border:'none',borderRadius:6,padding:'3px 8px',fontSize:11,fontWeight:700,cursor:'pointer'}}>X</button></div>):(<div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}><span style={{color:navy,textAlign:'right',maxWidth:160,wordBreak:'break-all'}}>{selected.email}</span><button onClick={()=>{setEditingCandidateEmail(true);setCandidateEmailDraft(selected.email||'');}} style={{background:'#1a56db',color:'#fff',border:'none',borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Edit</button></div>)}</div>{[{label:'WhatsApp',value:selected.whatsapp},{label:'Applied',value:selected.createdAt&&selected.createdAt.seconds?new Date(selected.createdAt.seconds*1000).toLocaleDateString():''},{label:'Score',value:selected.score?(selected.score+'/100 Grade '+(selected.grade||'?')):''},{label:'Priority',value:selected.priority||''}].filter(f=>f.value).map(f=>(<div key={f.label} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}><span style={{color:'#888',fontWeight:600}}>{f.label}</span><span style={{color:navy,textAlign:'right',maxWidth:200,wordBreak:'break-all'}}>{f.value}</span></div>))}
+              </div>
+              <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Profile</p>
+                {[{label:'Experience',value:selected.experience},{label:'English',value:selected.english},{label:'Passport',value:selected.passport},{label:'Available',value:selected.availability}].filter(f=>f.value).map(f=>(
+                  <div key={f.label} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}>
+                    <span style={{color:'#888',fontWeight:600}}>{f.label}</span>
+                    <span style={{color:navy,textAlign:'right',maxWidth:200}}>{f.value}</span>
+                  </div>
+                ))}
+              </div>
+              {[selected.video1,selected.video2,selected.video3].some(Boolean)&&(
+                <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                  <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Videos</p>
+                  {[selected.video1,selected.video2,selected.video3].map((v,i)=>v?(<div key={i} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}}><span style={{color:'#888',fontWeight:600}}>Video {i+1}</span><a href={v} target="_blank" rel="noopener noreferrer" style={{color:ocean,fontWeight:600,textDecoration:'none'}}>Watch</a></div>):null)}
+                </div>
+              )}
+              <div style={{background:'#f8faff',borderRadius:12,padding:16,marginBottom:14,border:'1px solid #e8eef8'}}>
+                <p style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Notes</p>
+                <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} rows={4} placeholder="Add notes..." style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'1.5px solid #e0e8f4',fontSize:13,outline:'none',resize:'vertical',boxSizing:'border-box',fontFamily:'system-ui'}}/>
+                <button onClick={saveNote} disabled={savingNote} style={{marginTop:8,background:ocean,color:'#fff',border:'none',borderRadius:10,padding:'8px 18px',fontSize:12,fontWeight:700,cursor:'pointer'}}>{savingNote?'Saving...':'Save Note'}</button>
+              </div>
+              <button onClick={async()=>{if(!window.confirm('Delete this application?'))return;try{const mod=await import('firebase/firestore');const col=selected._col||'applications';await mod.deleteDoc(mod.doc(db,col,selected.id));if(col==='photographerApplications'){setPhotographerApps(prev=>prev.filter(a=>a.id!==selected.id));}else{setApplications(prev=>prev.filter(a=>a.id!==selected.id));}setSelected(null);}catch(e){alert('Error: '+e.message);}}} style={{width:'100%',background:'#fff0f0',color:'#e85d4a',border:'1px solid #fdd',borderRadius:10,padding:10,fontSize:13,fontWeight:700,cursor:'pointer'}}>Delete Application</button>
+            </div>
+          </div>
+        )}
+      </div>      {showAddCandidate&&(<div style={{position:'fixed',inset:0,background:'rgba(10,22,40,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+        <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:460,boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+            <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Add Candidate</h3>
+            <button onClick={()=>setShowAddCandidate(false)} style={{background:'#f0f4fb',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer'}}>X</button>
+          </div>
+          {[{label:'Full Name',field:'fullName',placeholder:'e.g. John Doe'},{label:'Email',field:'email',placeholder:'e.g. john@email.com'},{label:'WhatsApp',field:'whatsapp',placeholder:'e.g. +1234567890'},{label:'Country',field:'country',placeholder:'e.g. Colombia'},{label:'Position',field:'position',placeholder:'e.g. Retail Sales - Starboard'}].map(f=>(
+            <div key={f.field} style={{marginBottom:12}}>
+              <label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>{f.label}</label>
+              {f.field==='country'?(
+                <select value={newCandidate[f.field]} onChange={e=>setNewCandidate(prev=>({...prev,[f.field]:e.target.value}))} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none',background:'#fff',cursor:'pointer'}}>
+                  <option value="">Select a country</option>
+                  {COUNTRY_OPTIONS.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+              ):(
+                <input value={newCandidate[f.field]} onChange={e=>setNewCandidate(prev=>({...prev,[f.field]:e.target.value}))} placeholder={f.placeholder} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/>
+              )}
+            </div>
+          ))}
+          <div style={{display:'flex',gap:10,marginTop:16}}>
+            <button onClick={()=>setShowAddCandidate(false)} style={{flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+            <button disabled={addingCandidate} onClick={async()=>{
+              if(!newCandidate.fullName||!newCandidate.email){alert('Full name and email are required.');return;}
+              setAddingCandidate(true);
+              try{
+                const mod=await import('firebase/firestore');
+                await mod.addDoc(mod.collection(db,'applications'),{fullName:newCandidate.fullName,email:newCandidate.email,whatsapp:newCandidate.whatsapp||'',country:newCandidate.country||'',position:newCandidate.position||'',status:'new',source:'manual',createdAt:mod.serverTimestamp()});
+                await loadApplications();
+                setShowAddCandidate(false);
+                alert('Candidate added: '+newCandidate.fullName);
+              }catch(e){alert('Error: '+e.message);}
+              setAddingCandidate(false);
+            }} style={{flex:2,background:ocean,color:'#fff',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:700,cursor:'pointer'}}>{addingCandidate?'Adding...':'Add Candidate'}</button>
+          </div>
+        </div>
+      </div>)}
+      {emailModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(10,22,40,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:560,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Email - {emailModal.fullName||emailModal.name}</h3>
+              <button onClick={()=>{setEmailModal(null);setEmailHtml('');setScheduledAt('');}} style={{background:'#f0f4fb',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer'}}>X</button>
+            </div>
+            <div style={{marginBottom:16}}>
+              <p style={{fontSize:11,fontWeight:700,color:'#15803d',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Training</p>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+                <button onClick={()=>{setEmailSubject('Complement Your Retail Experience — Free Cruise Ship Sales Training');setEmailBody(getTrainingInviteEmail(emailModal.fullName||emailModal.name||''));}} style={{padding:'5px 12px',background:'#f0fdf4',color:'#15803d',border:'1px solid #bbf7d0',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>Training Invite</button>
+                <button onClick={()=>{setEmailSubject('Free Duty-Free Sales Training - Selective Crew');setEmailBody(getTrainingCourseEmail(emailModal.fullName||emailModal.name||''));}} style={{padding:'5px 12px',background:'#f0fdf4',color:'#15803d',border:'1px solid #bbf7d0',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>Training Course Invite</button>
+                <button onClick={()=>{setEmailSubject('Next Step: Submit Your English Resume - Selective Crew');setEmailBody(getTrainingCompletionEmail(emailModal.fullName||emailModal.name||''));}} style={{padding:'5px 12px',background:'#f0fdf4',color:'#15803d',border:'1px solid #bbf7d0',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>Resume Required</button>
+              </div>
+              <p style={{fontSize:11,fontWeight:700,color:'#7c3aed',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Recruitment</p>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+                <button onClick={()=>{setEmailSubject('Update on Your Application - Selective Crew');setEmailBody(getRejectionEmail(emailModal.fullName||emailModal.name||''));}} style={{padding:'5px 12px',background:'#faf5ff',color:'#7c3aed',border:'1px solid #ddd6fe',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>Rejection Letter</button>
+                <button onClick={()=>{setEmailSubject('Action Required - Your Application with Selective Crew');setEmailBody(getFollowUpEmail(emailModal.fullName||emailModal.name||''));}} style={{padding:'5px 12px',background:'#faf5ff',color:'#7c3aed',border:'1px solid #ddd6fe',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>Follow Up</button>
+              </div>
+              <p style={{fontSize:11,fontWeight:700,color:'#db2777',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Photo Templates</p>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {[
+                  {k:'preemployment',l:'Pre-Employment Docs',s:'Request for Pre-Employment Documents - Photographer Position',b:getPhotographerDocsEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'nclvisa',l:'NCL Visa Guide',s:'C1/D Visa Application Guide - NCL Photographer Position',b:getNclVisaEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'ncl',l:'NCL Photographer',s:'NCL Shipboard Photographer Opportunity',b:getNclPhotoBody(emailModal.fullName||emailModal.name||'')},
+                  {k:'spark',l:'Spark Video Interview',s:'Next Step - Spark Video Interview for Photographer Position',b:getSparkVideoEmail(emailModal.fullName||emailModal.name||'')},
+                ].map(t=>(<button key={t.k} onClick={()=>{setEmailSubject(t.s);setEmailBody(t.b);}} style={{padding:'5px 12px',background:'#fdf2f8',color:'#db2777',border:'1px solid #f9a8d4',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>{t.l}</button>))}
+              </div>
+              <p style={{fontSize:11,fontWeight:700,color:'#0e4d8a',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Starboard Templates</p>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+                {[
+                  {k:'starboard',l:'Starboard Info',s:'Starboard Cruise Services - Information',b:getSBBody(emailModal.fullName||emailModal.name||'',emailModal.email||'',emailModal.id)},
+                  {k:'video',l:'Mandatory Video',s:'Starboard Mandatory Video Presentation',b:getVideoEmail(emailModal.fullName||emailModal.name||'',emailModal.email||'',emailModal.id)},
+                  {k:'omnia',l:'Omnia Assessment',s:'Omnia Assessment - Starboard',b:getOmniaEmail(emailModal.fullName||emailModal.name||'',emailModal.email||'',emailModal.id)},
+                  {k:'visa',l:'C1/D Visa',s:'C1/D Visa Application Guide',b:getVisaEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'prep',l:'Final Prep',s:'Final Interview Preparation',b:getFinalPrepEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'security',l:'Security Awareness',s:'Security Awareness Course - Required',b:getSecurityEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'selected',l:'You Are Selected!',s:'Congratulations - You Have Been Selected',b:getSelectedStarboardEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'rclcel',l:'RCL & CEL Medical',s:'Medical Requirements - Royal Caribbean & Celebrity',b:getRCLCELMedicalEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'stcw',l:'Basic STCW',s:'STCW Basic Safety Training Requirements',b:getSTCWEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'virginmed',l:'Virgin Voyages Medical',s:'Medical Requirements - Virgin Voyages',b:getVirginVoyagesMedicalEmail(emailModal.fullName||emailModal.name||'')},
+                  {k:'carnivalmed',l:'Carnival & Virgin Medical',s:'Medical Requirements - Carnival & Virgin',b:getCarnivalVirginMedicalEmail(emailModal.fullName||emailModal.name||'')},
+
+                  {k:'system',l:'iCIMS Registration',s:'iCIMS System Registration - Starboard',b:getStarboardSystemEmail(emailModal.fullName||emailModal.name||'')},
+                ].map(t=>(<button key={t.k} onClick={()=>{setEmailSubject(t.s);setEmailBody(t.b);}} style={{padding:'5px 12px',background:'#f0f7ff',color:'#0e4d8a',border:'1px solid #bfdbfe',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>{t.l}</button>))}
+              </div>
+              <button onClick={()=>{setEmailSubject('Selective Crew on behalf of Starboard Retail Group');if(typeof getStarboardDocsEmail==='function'){setEmailHtml(getStarboardDocsEmail(emailModal?emailModal.fullName||emailModal.name||'':''));};setEmailBody('Dear '+(emailModal?emailModal.fullName||emailModal.name||'Candidate':'Candidate')+',\n\nWelcome to Selective Crew, and thank you for completing your initial application for Starboard Retail Group. We are excited to guide you through the next steps of your recruitment and onboarding process.\n\nTo proceed with your file, please send us the following documents at your earliest convenience:\n\n1. Copy of your valid passport\n2. Updated CV/Resume\n3. Police Clearance Certificate (issued within the last 6 months)\n4. Full address including zip code\n\nYou may reply directly to this email with the requested documents attached.\n\nIf you have any questions or need support, feel free to reach out - we are here to help!\n\nWe look forward to assisting you toward an exciting career at sea.\n\nBest regards,\nSelective Crew\ncareers@selectivecrew.com');}} style={{padding:'5px 12px',background:'#f0f7ff',color:'#0e4d8a',border:'1px solid #bfdbfe',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer'}}>Document Request</button>
+            </div>
+            <div style={{marginBottom:10}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>To</label><input value={emailModal.email||''} readOnly style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,background:'#f8fafc',boxSizing:'border-box'}}/></div>
+            <div style={{marginBottom:10}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>CC</label><div style={{display:'flex',flexWrap:'wrap',gap:5,padding:'7px 10px',borderRadius:8,border:'1.5px solid #e0e8f4',minHeight:40,alignItems:'center',background:'#fff',cursor:'text'}} onClick={()=>document.getElementById('ccTagInput').focus()}>{emailCcList.map((addr,i)=>(<span key={i} style={{display:'inline-flex',alignItems:'center',gap:4,background:'#e8f0fe',color:'#1a56db',borderRadius:20,padding:'2px 10px',fontSize:12,fontWeight:500}}>{addr}<span onClick={()=>setEmailCcList(emailCcList.filter((_,j)=>j!==i))} style={{cursor:'pointer',fontSize:14,lineHeight:1,color:'#5b7fcf',marginLeft:2,fontWeight:700}}>x</span></span>))}<input id="ccTagInput" value={emailCcInput} onChange={e=>setEmailCcInput(e.target.value)} onKeyDown={e=>{if((e.key==='Enter'||e.key===','||e.key===' ')&&emailCcInput.trim()){e.preventDefault();const v=emailCcInput.trim().replace(/,$/,'');if(v&&!emailCcList.includes(v))setEmailCcList([...emailCcList,v]);setEmailCcInput('');}else if(e.key==='Backspace'&&!emailCcInput&&emailCcList.length){setEmailCcList(emailCcList.slice(0,-1));}}} onBlur={()=>{if(emailCcInput.trim()){const v=emailCcInput.trim().replace(/,$/,'');if(v&&!emailCcList.includes(v))setEmailCcList([...emailCcList,v]);setEmailCcInput('');}}} placeholder={emailCcList.length===0?'Add CC emails — press Enter or comma...':''} style={{border:'none',outline:'none',fontSize:13,flex:1,minWidth:150,background:'transparent'}}/></div></div>
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Attachments</label>
+              <input type="file" multiple onChange={async e=>{
+                const files=Array.from(e.target.files);
+                const converted=await Promise.all(files.map(f=>new Promise((res,rej)=>{
+                  const r=new FileReader();
+                  r.onload=()=>res({filename:f.name,content:r.result.split(',')[1],type:f.type});
+                  r.onerror=rej;
+                  r.readAsDataURL(f);
+                })));
+                setEmailAttachments(prev=>[...prev,...converted]);
+                e.target.value='';
+              }} style={{fontSize:12,color:'#555'}}/>
+              <button onClick={()=>setLibPickerOpen(true)} style={{marginTop:6,background:'#f0f7ff',color:'#0e4d8a',border:'1px solid #bfdbfe',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,cursor:'pointer'}}>Pick from Library</button>
+              {emailAttachments.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+                {emailAttachments.map((a,i)=>(<span key={i} style={{display:'inline-flex',alignItems:'center',gap:4,background:'#f0f4fb',color:'#555',borderRadius:20,padding:'2px 10px',fontSize:11,fontWeight:500}}>
+                  {a.filename}<span onClick={()=>setEmailAttachments(emailAttachments.filter((_,j)=>j!==i))} style={{cursor:'pointer',fontSize:13,color:'#e85d4a',marginLeft:2,fontWeight:700}}>x</span>
+                </span>))}
+              </div>}
+            </div>
+            {libPickerOpen&&(
+              <div style={{background:'#f8faff',border:'1px solid #e2e8f0',borderRadius:12,padding:16,marginBottom:12}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                  <span style={{fontSize:12,fontWeight:700,color:'#0a1628'}}>Pick from Library</span>
+                  <button onClick={()=>setLibPickerOpen(false)} style={{background:'none',border:'none',fontSize:16,cursor:'pointer',color:'#888'}}>x</button>
+                </div>
+                {documents.length===0?(<p style={{fontSize:12,color:'#aaa',margin:0}}>No documents in library yet.</p>):(
+                  <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:200,overflowY:'auto'}}>
+                    {documents.map(d=>{
+                      const already = emailAttachments.some(a=>a.filename===d.name);
+                      return(
+                        <div key={d.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'#fff',borderRadius:8,border:'1px solid #e2e8f0'}}>
+                          <span style={{fontSize:12,color:'#0a1628',fontWeight:600}}>{d.name}</span>
+                          <button disabled={already} onClick={()=>{
+                            if(d.base64){
+                              setEmailAttachments(prev=>[...prev,{filename:d.name,content:d.base64,type:d.type||'application/octet-stream'}]);
+                              setLibPickerOpen(false);
+                            } else {
+                              alert('This document was uploaded before library support was added. Please re-upload it to use it as an attachment.');
+                            }
+                          }} style={{background:already?'#e2e8f0':'#0e4d8a',color:already?'#888':'#fff',border:'none',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:already?'default':'pointer'}}>
+                            {already?'Added':'+ Add'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{marginBottom:10}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Subject</label><input value={emailSubject} onChange={e=>setEmailSubject(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+            <div style={{marginBottom:14}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Message</label><textarea value={emailBody} onChange={e=>setEmailBody(e.target.value)} rows={8} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none',resize:'vertical',fontFamily:'system-ui'}}/></div>
+            {emailResult&&<div style={{background:emailResult.includes('Failed')?'#fef2f2':'#f0fdf9',border:'1px solid '+(emailResult.includes('Failed')?'#fca5a5':'#bbf7d0'),borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:emailResult.includes('Failed')?'#991b1b':'#16a34a'}}>{emailResult}</div>}
+            <div style={{marginBottom:12}}>
+              <label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Schedule Send <span style={{fontWeight:400,color:'#888'}}>(optional)</span></label>
+              <input type='datetime-local' value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} min={new Date().toISOString().slice(0,16)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box'}} />
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setEmailModal(null)} style={{flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+              <button disabled={sendingEmail} onClick={async()=>{
+                if(!emailSubject||!emailBody){alert('Enter subject and message.');return;}
+                setSendingEmail(true);setEmailResult('');
+                try{
+                  const isHtml=emailBody.trim().startsWith('<');
+                  const res=await sendAdminEmail({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:emailModal.email,subject:emailSubject,text:emailHtml?emailBody:isHtml?emailBody.replace(/<[^>]*>/g,''):emailBody,html:emailHtml||isHtml?emailBody:null,cc:emailCcList||'',attachments:emailAttachments.map(a=>({filename:a.filename,content:a.content,type:a.type})),scheduledAt:scheduledAt?new Date(scheduledAt).toISOString():undefined})});
+                  const data=await res.json();
+                  if(data.success){setEmailResult('Sent!');setTimeout(()=>setEmailModal(null),1500);}
+                  else setEmailResult('Failed: '+(data.error||'Unknown'));
+                }catch(e){setEmailResult('Failed: '+e.message);}
+                setSendingEmail(false);
+              }} style={{flex:2,background:sendingEmail?'#ccc':ocean,color:'#fff',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:700,cursor:'pointer'}}>{sendingEmail?'Sending...':'Send Email'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {activeTab==='batchschedule'&&(
+        <div style={{flex:1,overflowY:'auto',padding:24}}>
+          <div style={{maxWidth:700,margin:'0 auto'}}>
+            <div style={{background:'#fff',borderRadius:16,padding:24,boxShadow:'0 2px 12px rgba(14,77,138,0.08)',border:'1px solid #e8eef8',marginBottom:20}}>
+              <h2 style={{fontSize:18,fontWeight:800,color:navy,marginBottom:4}}>Batch Schedule Interviews</h2>
+              <p style={{fontSize:12,color:'#888',marginBottom:20}}>Select candidates below, pick a start time, and schedule all interviews 15 minutes apart.</p>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+                <div>
+                  <label style={{display:'block',fontSize:12,fontWeight:600,color:'#374151',marginBottom:4}}>Date *</label>
+                  <input type="date" value={batchDate} onChange={e=>setBatchDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}} />
+                </div>
+                <div>
+                  <label style={{display:'block',fontSize:12,fontWeight:600,color:'#374151',marginBottom:4}}>Start Time *</label>
+                  <input type="time" value={batchStartTime} onChange={e=>setBatchStartTime(e.target.value)}
+                    style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}} />
+                </div>
+              </div>
+              <div style={{marginBottom:16}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                  <label style={{fontSize:12,fontWeight:600,color:'#374151'}}>Select Candidates (Pre Interview stage)</label>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={()=>setBatchCandidates(applications.filter(a=>a.status==='reviewing'))} style={{fontSize:11,color:ocean,background:'none',border:'none',cursor:'pointer',fontWeight:600}}>Select All</button>
+                    <button onClick={()=>setBatchCandidates([])} style={{fontSize:11,color:'#888',background:'none',border:'none',cursor:'pointer',fontWeight:600}}>Clear</button>
+                  </div>
+                </div>
+                <div style={{border:'1px solid #e0e8f4',borderRadius:8,overflow:'hidden'}}>
+                  {applications.filter(a=>a.status==='preinterview').map((a,i)=>(
+                    <div key={a.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderBottom:i<applications.length-1?'1px solid #f0f4fb':'none',background:batchCandidates.some(b=>b.id===a.id)?'#f0f7ff':'#fff'}}>
+                      <input type="checkbox"
+                        checked={batchCandidates.some(b=>b.id===a.id)}
+                        onChange={e=>{ if(e.target.checked) setBatchCandidates(prev=>[...prev,a]); else setBatchCandidates(prev=>prev.filter(b=>b.id!==a.id)); }}
+                        style={{cursor:'pointer',width:16,height:16}} />
+                      <div style={{flex:1}}>
+                        <p style={{fontSize:13,fontWeight:600,color:navy,margin:0}}>{a.fullName}</p>
+                        <p style={{fontSize:11,color:'#888',margin:0}}>{a.email} · {a.stage||'Applied'}</p>
+                      </div>
+                      {batchCandidates.some(b=>b.id===a.id)&&(()=>{
+                        const idx2=batchCandidates.findIndex(b=>b.id===a.id);
+                        if(idx2===-1||!batchDate||!batchStartTime) return null;
+                        const t=new Date(batchDate+'T'+batchStartTime+':00');
+                        t.setMinutes(t.getMinutes()+idx2*15);
+                        return <span style={{fontSize:11,fontWeight:700,color:ocean,whiteSpace:'nowrap'}}>{t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>;
+                      })()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {batchResults.length>0&&(
+                <div style={{marginBottom:16,background:'#f0fdf4',borderRadius:8,padding:12}}>
+                  <p style={{fontSize:12,fontWeight:700,color:'#16a34a',marginBottom:8}}>Results:</p>
+                  {batchResults.map((r,i)=>(
+                    <p key={i} style={{fontSize:12,margin:'3px 0',color:r.status==='success'?'#16a34a':'#e85d4a'}}>{r.status==='success'?'✓':'✗'} {r.time} - {r.name}</p>
+                  ))}
+                </div>
+              )}
+              <button disabled={batchScheduling||batchCandidates.length===0||!batchDate||!batchStartTime}
+                onClick={runBatchSchedule}
+                style={{width:'100%',background:batchScheduling||batchCandidates.length===0||!batchDate?'#94a3b8':ocean,color:'#fff',border:'none',borderRadius:10,padding:'13px 0',fontSize:14,fontWeight:700,cursor:batchScheduling||batchCandidates.length===0||!batchDate?'not-allowed':'pointer'}}>
+                {batchScheduling?'Scheduling...':batchCandidates.length===0?'Select candidates first':'Schedule '+batchCandidates.length+' Interviews (15 min apart)'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {batchScheduleModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(10,22,40,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:560,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Batch Schedule Interviews</h3>
+              <button onClick={()=>setBatchScheduleModal(false)} style={{background:'#f0f4fb',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer'}}>X</button>
+            </div>
+            <p style={{fontSize:12,color:'#888',marginBottom:16}}>Schedules interviews 15 minutes apart starting from the time you select.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+              <div>
+                <label style={{display:'block',fontSize:12,fontWeight:600,color:'#374151',marginBottom:4}}>Date *</label>
+                <input type="date" value={batchDate} onChange={e=>setBatchDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}} />
+              </div>
+              <div>
+                <label style={{display:'block',fontSize:12,fontWeight:600,color:'#374151',marginBottom:4}}>Start Time *</label>
+                <input type="time" value={batchStartTime} onChange={e=>setBatchStartTime(e.target.value)}
+                  style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}} />
+              </div>
+            </div>
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontSize:12,fontWeight:600,color:'#374151',marginBottom:8}}>Select Candidates ({batchCandidates.length} selected)</label>
+              <div style={{maxHeight:200,overflowY:'auto',border:'1px solid #e0e8f4',borderRadius:8,padding:8}}>
+                {applications.map(a=>(
+                  <div key={a.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 4px',borderBottom:'1px solid #f0f4fb'}}>
+                    <input type="checkbox"
+                      checked={batchCandidates.some(b=>b.id===a.id)}
+                      onChange={e=>{ if(e.target.checked) setBatchCandidates(prev=>[...prev,a]); else setBatchCandidates(prev=>prev.filter(b=>b.id!==a.id)); }}
+                      style={{cursor:'pointer'}} />
+                    <span style={{fontSize:13,color:navy,fontWeight:600}}>{a.fullName}</span>
+                    <span style={{fontSize:11,color:'#888'}}>{a.email}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {batchCandidates.length > 0 && batchDate && (
+              <div style={{background:'#f0f7ff',borderRadius:8,padding:12,marginBottom:16}}>
+                <p style={{fontSize:12,color:'#0e4d8a',margin:0,fontWeight:600}}>Schedule Preview:</p>
+                {batchCandidates.map((c,i)=>{
+                  const t = new Date(batchDate+'T'+batchStartTime+':00');
+                  t.setMinutes(t.getMinutes()+i*15);
+                  return <p key={c.id} style={{fontSize:12,color:'#374151',margin:'4px 0 0'}}>{t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - {c.fullName}</p>;
+                })}
+              </div>
+            )}
+            {batchResults.length > 0 && (
+              <div style={{marginBottom:16}}>
+                {batchResults.map((r,i)=>(
+                  <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'6px 10px',borderRadius:6,marginBottom:4,background:r.status==='success'?'#f0fdf4':'#fff5f5'}}>
+                    <span style={{fontSize:12,fontWeight:600,color:r.status==='success'?'#16a34a':'#e85d4a'}}>{r.time} - {r.name}</span>
+                    <span style={{fontSize:11,color:r.status==='success'?'#16a34a':'#e85d4a'}}>{r.status==='success'?'Scheduled':'Failed'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setBatchScheduleModal(false)} style={{flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:'11px 0',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+              <button disabled={batchScheduling||batchCandidates.length===0||!batchDate} onClick={runBatchSchedule}
+                style={{flex:2,background:batchScheduling?'#94a3b8':ocean,color:'#fff',border:'none',borderRadius:10,padding:'11px 0',fontSize:13,fontWeight:700,cursor:batchScheduling?'not-allowed':'pointer'}}>
+                {batchScheduling?'Scheduling...':'Schedule '+batchCandidates.length+' Interviews'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {calendarModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(10,22,40,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:420,boxShadow:'0 24px 80px rgba(10,22,40,0.3)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h3 style={{fontSize:16,fontWeight:800,color:navy,margin:0}}>Schedule Interview</h3>
+              <button onClick={()=>setCalendarModal(null)} style={{background:'#f0f4fb',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer'}}>X</button>
+            </div>
+            <p style={{fontSize:14,fontWeight:600,color:navy,marginBottom:16}}>{calendarModal.fullName}</p>
+            <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Date</label><input type="date" value={calendarDate} onChange={e=>setCalendarDate(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+              <div><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Time</label><input type="time" value={calendarTime} onChange={e=>setCalendarTime(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}}/></div>
+              <div><label style={{fontSize:12,fontWeight:600,color:'#555',display:'block',marginBottom:4}}>Duration (min)</label><select value={calendarDuration} onChange={e=>setCalendarDuration(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none',background:'#fff'}}><option value="15">15</option><option value="30">30</option><option value="45">45</option><option value="60">60</option><option value="90">90</option></select></div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={{display:'block',fontSize:12,fontWeight:600,color:'#374151',marginBottom:4}}>CC (optional)</label>
+              <input type="email" value={calendarCc} onChange={e=>setCalendarCc(e.target.value)} placeholder="cc@example.com" style={{width:'100%',padding:'9px 12px',border:'1px solid #e0e8f4',borderRadius:8,fontSize:13,boxSizing:'border-box',outline:'none'}} />
+            </div>
+            {scheduleSuccess&&<div style={{background:'#f0fdf9',border:'1px solid #bbf7d0',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#16a34a'}}>{scheduleSuccess}</div>}
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setCalendarModal(null)} style={{flex:1,background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+              <button disabled={schedulingInterview} onClick={async()=>{
+                if(!calendarDate||!calendarTime){alert('Select date and time.');return;}
+                setSchedulingInterview(true);
+                try{
+                  const startDT=new Date(calendarDate+'T'+calendarTime+':00');
+                  const endDT=new Date(startDT.getTime()+parseInt(calendarDuration)*60000);
+                  const res=await gmailFetch('/api/gmail?action=create-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({summary:'Interview - Duty-Free Sales Associate: '+calendarModal.fullName,description:'Please confirm your attendance by replying to this email. If you are unable to attend at the scheduled time, please let us know as soon as possible so we can reschedule. We look forward to meeting you!\n\nSelective Crew\ncareers@selectivecrew.com\nWhatsApp: +57 318 847 4058',startTime:startDT.toISOString(),endTime:endDT.toISOString(),attendeeEmail:calendarEmail||calendarModal.email,ccEmail:calendarCc})});
+                  const data=await res.json();
+                  if(data.success){setScheduleSuccess('Scheduled! '+(data.meetLink||''));const col=calendarModal._col||'applications';if(col==='applications'){await moveCandidate(calendarModal.id,'preinterview');}await updateDoc(doc(db,col,calendarModal.id),{interviewDate:calendarDate,interviewTime:calendarTime,meetLink:data.meetLink||''});setTimeout(()=>{setCalendarModal(null);setScheduleSuccess('');},3000);}
+                  else alert('Failed: '+(data.error||'Unknown'));
+                }catch(e){alert('Failed: '+e.message);}
+                setSchedulingInterview(false);
+              }} style={{flex:2,background:schedulingInterview?'#ccc':'#8b5cf6',color:'#fff',border:'none',borderRadius:10,padding:12,fontSize:14,fontWeight:700,cursor:'pointer'}}>{schedulingInterview?'Scheduling...':'Schedule Interview'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

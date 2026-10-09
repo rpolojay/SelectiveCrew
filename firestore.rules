@@ -1,0 +1,168 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email_verified == true && !('clientSlug' in request.auth.token) && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email_verified == true && request.auth.token.email in [
+          'careers@selectivecrew.com',
+          'rpolo@selectivecrew.com'
+        ])
+      );
+    }
+    // Portal users carry their client assignment as a custom claim on the
+    // ID token (set via Admin SDK in /api/portal-users), NOT via a Firestore
+    // get()/exists() lookup. A list rule that needs get()/exists() on another
+    // document is evaluated per-candidate-document and hits Firestore's ~10
+    // document-access-call-per-request limit, which silently denies the
+    // ENTIRE query once a collection has more than a handful of documents —
+    // that is what previously broke the admin CRM's full applications list.
+    function isPortalUser() { return isSignedIn() && ('clientSlug' in request.auth.token); }
+    function portalClientSlug() { return request.auth.token.clientSlug; }
+    function isAssignedToPortalClient() {
+      return (('portalClientSlug' in resource.data) && resource.data.portalClientSlug == portalClientSlug()) ||
+        (('cruiseLine' in resource.data) && resource.data.cruiseLine == portalClientSlug());
+    }
+    // Portal accounts may change only their own pipeline label and the
+    // candidate's country, each as a bounded string.
+    function isPortalFieldUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasOnly(['portalStatus', 'country']) &&
+        (!changed.hasAny(['portalStatus']) ||
+          (request.resource.data.portalStatus is string && request.resource.data.portalStatus.size() <= 100)) &&
+        (!changed.hasAny(['country']) ||
+          (request.resource.data.country is string && request.resource.data.country.size() <= 100));
+    }
+    // Candidates signed in through the /documents OTP flow (custom token
+    // minted server-side by /api/candidate-action) may read only the one
+    // application the token was issued for.
+    function isDocumentCandidateFor(docId) {
+      return isSignedIn() && ('candidateDocumentId' in request.auth.token) &&
+        request.auth.token.candidateDocumentId == docId;
+    }
+    function isPortalUnassignment() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['portalClientSlug', 'cruiseLine']) &&
+        !('portalClientSlug' in request.resource.data) && !('cruiseLine' in request.resource.data);
+    }
+    function isPublicConfirmationUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'videoWatched', 'videoWatchedAt', 'omniaCompleted', 'omniaCompletedAt',
+          'sbInterested', 'sbInterestedAt'
+        ]) && (
+          (('videoWatched' in request.resource.data) && request.resource.data.videoWatched == true &&
+            ('videoWatchedAt' in request.resource.data) && request.resource.data.videoWatchedAt is string) ||
+          (('omniaCompleted' in request.resource.data) && request.resource.data.omniaCompleted == true &&
+            ('omniaCompletedAt' in request.resource.data) && request.resource.data.omniaCompletedAt is string) ||
+          (('sbInterested' in request.resource.data) && request.resource.data.sbInterested == true &&
+            ('sbInterestedAt' in request.resource.data) && request.resource.data.sbInterestedAt is string)
+        );
+    }
+
+    match /applications/{docId} {
+      // Full candidate records are private. Candidates use narrowly scoped
+      // action/document endpoints; client portal accounts see only assigned
+      // records and admins see the full recruiting pipeline.
+      allow get: if isAdmin() || (isPortalUser() && isAssignedToPortalClient()) || isDocumentCandidateFor(docId);
+      allow list: if isAdmin() || (isPortalUser() && isAssignedToPortalClient());
+      // Public application forms may create candidates, but cannot assign
+      // those records to a client portal. Trusted admin/server paths assign them.
+      allow create: if isAdmin() || (!isPortalUser() &&
+        !('portalClientSlug' in request.resource.data) && !('cruiseLine' in request.resource.data));
+      allow delete: if isAdmin();
+      allow update: if isAdmin() ||
+        (isPortalUser() && isAssignedToPortalClient() && (isPortalFieldUpdate() || isPortalUnassignment()));
+    }
+    match /clients/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /portalUsers/{docId} {
+      allow read: if isAdmin() ||
+        (isPortalUser() && request.auth.uid == docId && resource.data.clientSlug == portalClientSlug());
+      allow write: if false; // managed only via the /api/portal-users server route (Admin SDK)
+    }
+    match /placements/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /employer_inquiries/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /documents/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /candidates/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /users/{docId} {
+      allow read, write: if isAdmin() || (isSignedIn() && request.auth.uid == docId);
+    }
+    match /training_sessions/{userId} {
+      allow get: if request.auth != null && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.uid == userId &&
+        request.resource.data.certified == false && request.resource.data.certId == null &&
+        request.resource.data.quizScore == null && request.resource.data.get('quizTotal', null) == null &&
+        request.resource.data.quizAttempts == 0 && request.resource.data.modulesCompleted == [];
+      allow update: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastActiveAt', 'modulesCompleted'
+        ]) && request.resource.data.certified == resource.data.certified &&
+        request.resource.data.certId == resource.data.certId;
+      allow delete: if false;
+    }
+    match /certificates/{certId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+    match /trainingLeads/{docId} {
+      allow create: if !isPortalUser() && request.resource.data.email is string &&
+        request.resource.data.email.size() <= 254;
+      allow read, update, delete: if isAdmin();
+    }
+    match /photographerApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /fastTrackApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /retailSalesApplications/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /candidateDocuments/{docId} {
+      allow create: if isSignedIn() && ('candidateDocumentId' in request.auth.token) &&
+        request.resource.data.applicationId == request.auth.token.candidateDocumentId &&
+        request.resource.data.email == request.auth.token.candidateEmail;
+      allow read, update, delete: if isAdmin();
+    }
+    // Holds the Gmail OAuth tokens (settings/gmail_oauth). Admin-only from
+    // clients; the server Gmail routes use the Admin SDK, which bypasses rules.
+    match /settings/{docId} {
+      allow read, write: if isAdmin();
+    }
+    // Server-only collections (Admin SDK); never readable or writable by clients.
+    match /gmailOAuthStates/{docId} {
+      allow read, write: if false;
+    }
+    match /apiRateLimits/{docId} {
+      allow read, write: if false;
+    }
+    match /talent_pool/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /grievances/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /candidateAccessChallenges/{docId} {
+      allow read, write: if false;
+    }
+  }
+}
