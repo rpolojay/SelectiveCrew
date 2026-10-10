@@ -62,7 +62,7 @@ export default function RemoteStaffingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'careers@selectivecrew.com',
+          to: 'staffing@selectivecrew.com',
           subject: `Remote Staffing Inquiry — ${form.company} (${form.role})`,
           text: `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}${form.practice ? `\nPractice area: ${form.practice}` : ''}\nRole needed: ${form.role}\nMessage: ${form.message}`,
         }),
@@ -316,7 +316,8 @@ export default function RemoteStaffingPage() {
               </button>
               {sendError && (
                 <p role="alert" style={{ fontSize: 13, color: '#fecaca', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8, padding: '10px 12px', margin: 0, lineHeight: 1.6 }}>
-                  {es ? 'Lo sentimos, tu solicitud no pudo enviarse. Intenta de nuevo o escríbenos a careers@selectivecrew.com.' : 'Sorry, your request couldn’t be sent. Please try again or email us at careers@selectivecrew.com.'}
+                  {es ? 'Lo sentimos, tu solicitud no pudo enviarse. Intenta de nuevo o escríbenos a ' : 'Sorry, your request couldn’t be sent. Please try again or email us at '}
+                  <a href="mailto:staffing@selectivecrew.com" style={{ color: '#fecaca', textDecoration: 'underline' }}>staffing@selectivecrew.com</a>.
                 </p>
               )}
               <p style={{ fontSize: 12, color: 'rgba(248,244,236,0.3)', textAlign: 'center', margin: 0 }}>
@@ -330,6 +331,10 @@ export default function RemoteStaffingPage() {
               {es ? 'Agenda una llamada de 15 min' : 'Book a 15-min call'}
             </a>
           </div>
+          <p style={{ fontSize: 14, color: 'rgba(248,244,236,0.55)', textAlign: 'center', margin: '16px 0 0' }}>
+            {es ? '¿Prefieres correo? ' : 'Prefer email? '}
+            <a href="mailto:staffing@selectivecrew.com" style={{ color: '#f8f4ec', fontWeight: 600, textDecoration: 'underline' }}>staffing@selectivecrew.com</a>
+          </p>
         </div>
       </section>
 

@@ -49,6 +49,11 @@ export default function Footer() {
           <div>
             <img src="/selective-logo.png" alt="Selective Crew" style={{height:38,width:'auto',filter:'brightness(0) invert(1)',marginBottom:16,opacity:0.9}}/>
             <p style={{fontSize:14,color:'rgba(255,255,255,0.4)',lineHeight:1.8,marginBottom:20,maxWidth:260}}>{tagline}</p>
+            {isRemoteStaffing && (
+              <p style={{fontSize:14,marginBottom:20}}>
+                <a href="mailto:staffing@selectivecrew.com" style={{color:'rgba(255,255,255,0.6)',textDecoration:'underline'}}>staffing@selectivecrew.com</a>
+              </p>
+            )}
             <div style={{display:'flex',gap:10}}>
               {[
                 {href:'https://www.facebook.com/selectivecrew',label:'f'},

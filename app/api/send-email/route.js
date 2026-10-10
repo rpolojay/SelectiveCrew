@@ -4,6 +4,8 @@ import { getAdminDb, requireAdmin } from '../../../lib/firebaseAdmin';
 import { takeRateLimit } from '../../../lib/rateLimit';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// The only addresses public (non-admin) callers may send to.
+const PUBLIC_RECIPIENTS = new Set(['careers@selectivecrew.com', 'staffing@selectivecrew.com']);
 
 export async function POST(request) {
   try {
@@ -43,7 +45,7 @@ export async function POST(request) {
       attachments = [];
       scheduledAt = null;
     } else if (!isAdmin) {
-      if (String(to || '').trim().toLowerCase() !== 'careers@selectivecrew.com' || body?.cc || scheduledAt || html) {
+      if (!PUBLIC_RECIPIENTS.has(String(to || '').trim().toLowerCase()) || body?.cc || scheduledAt || html) {
         return NextResponse.json({ error: 'This email operation is not permitted' }, { status: 403 });
       }
       if (!(await takeRateLimit(request, { scope: 'public-careers-email', limit: 8, windowMs: 60 * 60 * 1000 }))) {
