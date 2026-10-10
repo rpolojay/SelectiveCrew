@@ -112,13 +112,15 @@ export default function CRMPage() {
   const [formData, setFormData] = useState({ name:'', agency:'', email:'', whatsapp:'', country:'', package:'', candidates:'' });
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState(false);
   const handle = e => setFormData({...formData, [e.target.name]: e.target.value});
 
   async function submit(e) {
     e.preventDefault();
     setBusy(true);
+    setSendError(false);
     try {
-      await fetch('/api/send-email', {
+      const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,8 +129,10 @@ export default function CRMPage() {
           text: 'CRM SYSTEM INQUIRY\n\nName: ' + formData.name + '\nAgency: ' + formData.agency + '\nEmail: ' + formData.email + '\nWhatsApp: ' + formData.whatsapp + '\nCountry: ' + formData.country + '\nPackage Interest: ' + formData.package + '\nCandidates per month: ' + formData.candidates,
         }),
       });
+      // Only a successful response counts; on failure the form keeps its values.
+      if (!res.ok) throw new Error('send-email ' + res.status);
       setSubmitted(true);
-    } catch(e) { alert('Something went wrong. Please contact us on WhatsApp: +57 318 847 4058'); }
+    } catch(e) { setSendError(true); }
     setBusy(false);
   }
 
@@ -380,6 +384,11 @@ export default function CRMPage() {
               <button type="submit" disabled={busy} className="crm-btn-gold" style={{ width:'100%', justifyContent:'center', fontSize:15 }}>
                 {busy ? 'Sending...' : es ? 'Agendar Demo Gratis ->' : 'Book Free Demo Call ->'}
               </button>
+              {sendError && (
+                <p role="alert" style={{ fontSize:13, color:'#fecaca', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)', borderRadius:8, padding:'10px 12px', marginTop:14, lineHeight:1.6 }}>
+                  {es ? 'Lo sentimos, tu solicitud no pudo enviarse. Intenta de nuevo o escríbenos a careers@selectivecrew.com.' : 'Sorry, your request couldn’t be sent. Please try again or email us at careers@selectivecrew.com.'}
+                </p>
+              )}
               <p style={{ textAlign:'center', fontSize:12, color:'rgba(248,244,236,0.3)', marginTop:14 }}>We respond within 24 hours. No commitment required.</p>
             </form>
           )}
