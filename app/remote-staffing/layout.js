@@ -1,20 +1,20 @@
 export const metadata = {
-  title: { absolute: 'Remote Staffing: Bilingual Latin American Talent | Selective Crew' },
-  description: 'Hire pre-vetted, bilingual Latin American remote professionals for customer service, operations and sales. English-tested, background-checked, profiles in 48 hours.',
-  keywords: ['remote staffing', 'bilingual remote staff', 'Latin American talent', 'nearshore staffing', 'virtual assistant', 'bilingual customer service', 'LATAM remote hiring'],
+  title: { absolute: 'Bilingual Intake Staff for U.S. Law Firms | Selective Crew' },
+  description: 'Native Spanish-speaking, English-tested intake specialists and legal assistants from Colombia for U.S. law firms. Profiles typically within 48 hours. One-time placement fee, no long-term contracts.',
+  keywords: ['bilingual intake specialist', 'Spanish speaking legal assistant', 'law firm virtual receptionist', 'immigration law firm staffing', 'personal injury intake', 'remote legal assistant', 'bilingual remote staff'],
   alternates: { canonical: 'https://selectivecrew.com/remote-staffing' },
   openGraph: {
     type: 'website',
     url: 'https://selectivecrew.com/remote-staffing',
     siteName: 'Selective Crew',
     locale: 'en_US',
-    title: 'Remote Staffing: Bilingual Latin American Talent | Selective Crew',
-    description: 'Hire pre-vetted, bilingual Latin American remote professionals for customer service, operations and sales. English-tested, background-checked, profiles in 48 hours.',
+    title: 'Bilingual Intake Staff for U.S. Law Firms | Selective Crew',
+    description: 'Native Spanish-speaking, English-tested intake specialists and legal assistants from Colombia for U.S. law firms. Profiles typically within 48 hours. One-time placement fee, no long-term contracts.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Remote Staffing: Bilingual Latin American Talent | Selective Crew',
-    description: 'Hire pre-vetted, bilingual Latin American remote professionals for customer service, operations and sales. English-tested, background-checked, profiles in 48 hours.',
+    title: 'Bilingual Intake Staff for U.S. Law Firms | Selective Crew',
+    description: 'Native Spanish-speaking, English-tested intake specialists and legal assistants from Colombia for U.S. law firms. Profiles typically within 48 hours. One-time placement fee, no long-term contracts.',
   },
 };
 

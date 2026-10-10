@@ -6,61 +6,72 @@ import { useLang } from '../../lib/LanguageContext';
 const navy = "#0a1628";
 const teal = "#0d9488";
 
+// "Book a 15-min call" target. Points to the form until a Cal.com URL exists;
+// set it to the https:// booking URL and the buttons open it in a new tab.
+const CAL_LINK = '#contact';
+const CAL_EXTERNAL = CAL_LINK.startsWith('http');
+
 const ROLES = [
-  { icon: '🎧', en: 'Bilingual Customer Service', es: 'Servicio al Cliente Bilingüe', desc_en: 'Spanish/English support for U.S. e-commerce brands. Chat, email, and phone.', desc_es: 'Soporte español/inglés para marcas de e-commerce en EE.UU. Chat, email y teléfono.' },
-  { icon: '🛍️', en: 'E-commerce Operations', es: 'Operaciones E-commerce', desc_en: 'Order management, returns, supplier coordination, inventory tracking.', desc_es: 'Gestión de pedidos, devoluciones, coordinación con proveedores, inventario.' },
-  { icon: '📋', en: 'Virtual Assistant', es: 'Asistente Virtual', desc_en: 'Executive support, scheduling, research, inbox management for U.S. founders.', desc_es: 'Soporte ejecutivo, agenda, investigación, gestión de inbox para fundadores en EE.UU.' },
-  { icon: '📊', en: 'Sales Development Rep', es: 'Representante de Desarrollo de Ventas', desc_en: 'Outbound prospecting, lead qualification, CRM management in English.', desc_es: 'Prospección saliente, calificación de leads, manejo de CRM en inglés.' },
+  { icon: '🎧', en: 'Bilingual Intake Specialist', es: 'Especialista Bilingüe de Admisión (Intake)', desc_en: 'Answers calls, chats and web leads in English and Spanish, collects case details, and schedules consultations.', desc_es: 'Atiende llamadas, chats y prospectos web en inglés y español, recopila los detalles del caso y agenda consultas.' },
+  { icon: '📞', en: 'Legal Receptionist', es: 'Recepcionista Legal', desc_en: 'Manages phones, calendars, client reminders and walk-in coordination for your front office.', desc_es: 'Gestiona teléfonos, agendas, recordatorios a clientes y la coordinación de visitas presenciales en tu recepción.' },
+  { icon: '📋', en: 'Case Follow-up Assistant', es: 'Asistente de Seguimiento de Casos', desc_en: 'Keeps clients updated, collects documents and signatures, and chases missing information.', desc_es: 'Mantiene informados a los clientes, recopila documentos y firmas, y da seguimiento a la información pendiente.' },
+  { icon: '📊', en: 'Admin & CRM Assistant', es: 'Asistente Administrativo y de CRM', desc_en: 'Data entry, file organization and CRM updates in tools like Clio, MyCase, Lawmatics and Filevine.', desc_es: 'Ingreso de datos, organización de archivos y actualización del CRM en herramientas como Clio, MyCase, Lawmatics y Filevine.' },
 ];
 
 const WHY = [
-  { icon: '🌎', en: '17 years placing Latin American talent', es: '17 años colocando talento latinoamericano' },
-  { icon: '✅', en: '2,000+ professionals placed internationally since 2009', es: 'Más de 2,000 profesionales colocados internacionalmente desde 2009' },
-  { icon: '🗣️', en: 'Pre-screened English proficiency', es: 'Inglés pre-evaluado' },
-  { icon: '⚡', en: 'Candidate profiles within 48 hours', es: 'Perfiles de candidatos en 48 horas' },
-  { icon: '🔄', en: '30-day free replacement guarantee', es: 'Garantía de reemplazo gratis en 30 días' },
-  { icon: '💳', en: 'No placement fees — flat monthly rate', es: 'Sin fees de colocación — tarifa mensual fija' },
+  { icon: '🌎', en: '2,000+ professionals placed internationally since 2009', es: 'Más de 2,000 profesionales colocados internacionalmente desde 2009' },
+  { icon: '🗣️', en: 'Native Spanish, English tested at C1', es: 'Español nativo, inglés evaluado en nivel C1' },
+  { icon: '✅', en: 'Screened for English, work history and references', es: 'Evaluados en inglés, historial laboral y referencias' },
+  { icon: '⚡', en: 'Candidate profiles typically within 48 hours', es: 'Perfiles de candidatos normalmente en 48 horas' },
+  { icon: '🕒', en: 'Works in U.S. time zones (Colombia is UTC-5)', es: 'Trabajan en horarios de EE.UU. (Colombia está en UTC-5)' },
+  { icon: '🔄', en: 'Replacement candidate at no additional placement fee within the first 30 days', es: 'Candidato de reemplazo sin tarifa de colocación adicional durante los primeros 30 días' },
+  { icon: '💳', en: 'One-time placement fee, no long-term contracts', es: 'Tarifa de colocación única, sin contratos a largo plazo' },
 ];
 
 const PLANS = [
-  { title_en: 'Entry Level', title_es: 'Nivel Básico', price: '$1,200/mo', hot: false, features_en: ['Bilingual customer service', 'Chat & email support', 'Shopify & Gorgias', 'English B2 level', '40 hrs/week'], features_es: ['Servicio al cliente bilingüe', 'Soporte chat y email', 'Shopify & Gorgias', 'Inglés nivel B2', '40 hrs/semana'] },
-  { title_en: 'Mid Level', title_es: 'Nivel Medio', price: '$1,500/mo', hot: true, features_en: ['CS + operations', 'CRM management', 'Shopify + Zendesk', 'English C1 level', 'Team coordination'], features_es: ['CS + operaciones', 'Manejo de CRM', 'Shopify + Zendesk', 'Inglés nivel C1', 'Coordinación de equipo'] },
-  { title_en: 'Senior Level', title_es: 'Nivel Senior', price: '$1,800/mo', hot: false, features_en: ['Sales development', 'Team leadership', 'Advanced tools', 'English C1+ level', 'Strategic support'], features_es: ['Desarrollo de ventas', 'Liderazgo de equipo', 'Herramientas avanzadas', 'Inglés C1+', 'Soporte estratégico'] },
+  { title_en: 'Placement fee', title_es: 'Tarifa de colocación', price: '$1,200', unit_en: ' per hire', unit_es: ' por contratación', hot: false, features_en: ['Paid once, when your team member starts', 'Includes sourcing, English testing and screening', '1–2 matched profiles'], features_es: ['Se paga una sola vez, cuando tu integrante comienza', 'Incluye búsqueda, evaluación de inglés y filtro de candidatos', '1–2 perfiles seleccionados para tu firma'] },
+  { title_en: 'Ongoing support (optional)', title_es: 'Soporte continuo (opcional)', price: '$300', unit_en: '/month', unit_es: '/mes', hot: false, features_en: ['Regular check-ins', 'Performance follow-up', 'Replacement candidate at no additional placement fee if your team member leaves, while your support plan is active'], features_es: ['Reuniones de seguimiento periódicas', 'Seguimiento del desempeño', 'Candidato de reemplazo sin tarifa de colocación adicional si tu integrante se retira, mientras tu plan de soporte esté activo'] },
+  { title_en: 'Team member’s pay', title_es: 'Pago del integrante del equipo', price: '$900–$1,300', priceSize: 26, unit_en: '/month', unit_es: '/mes', hot: false, features_en: ['Paid directly by your firm', 'Typical full-time range, depending on the role', 'We’ll recommend a fair rate'], features_es: ['Lo paga directamente tu firma', 'Rango típico a tiempo completo, según el rol', 'Te recomendamos una tarifa justa'] },
 ];
 
 const FAQS = [
-  { q_en: 'What time zones do your candidates work in?', q_es: '¿En qué zona horaria trabajan sus candidatos?', a_en: 'Most candidates are based in Colombia (UTC-5), which overlaps significantly with U.S. Eastern and Central time zones.', a_es: 'La mayoría están en Colombia (UTC-5), zona horaria que se superpone con el este y centro de EE.UU.' },
-  { q_en: 'How is this different from Upwork or Fiverr?', q_es: '¿En qué se diferencia de Upwork o Fiverr?', a_en: 'We pre-screen every candidate for English level, reliability, and work history. You get one vetted person — not 50 proposals.', a_es: 'Pre-evaluamos cada candidato en inglés, confiabilidad e historial laboral. Recibes una persona verificada, no 50 propuestas.' },
-  { q_en: 'What is the monthly cost?', q_es: '¿Cuál es el costo mensual?', a_en: '$1,200–$1,800/month depending on experience and role. No placement fee. No hidden costs.', a_es: '$1,200–$1,800/mes según experiencia y rol. Sin fee de colocación. Sin costos ocultos.' },
-  { q_en: 'Can I try before committing?', q_es: '¿Puedo probar antes de comprometer?', a_en: 'Yes. We offer a 2-week trial. If it is not a fit, we replace at no cost.', a_es: 'Sí. Ofrecemos una prueba de 2 semanas. Si no hay fit, reemplazamos sin costo.' },
-  { q_en: 'What tools do your candidates use?', q_es: '¿Qué herramientas usan sus candidatos?', a_en: 'Gorgias, Zendesk, Shopify, HubSpot, Notion, Slack, Asana — most are familiar with standard U.S. business tools.', a_es: 'Gorgias, Zendesk, Shopify, HubSpot, Notion, Slack, Asana — la mayoría conoce las herramientas estándar de EE.UU.' },
+  { q_en: 'Who employs the team member?', q_es: '¿Quién es el empleador del integrante del equipo?', a_en: 'We recruit, screen and present candidates. Your firm engages the team member directly or through an employer-of-record service such as Deel or Ontop, pays them directly, and directs and supervises their work. We can recommend options and help with setup.', a_es: 'Nosotros reclutamos, evaluamos y presentamos a los candidatos. Tu firma contrata al integrante directamente o a través de un servicio de employer of record (empleador registrado) como Deel u Ontop, le paga directamente y dirige y supervisa su trabajo. Podemos recomendarte opciones y ayudarte con la configuración.' },
+  { q_en: 'How do you handle confidentiality?', q_es: '¿Cómo manejan la confidencialidad?', a_en: 'Team members sign a confidentiality agreement before starting. Your firm controls their system access, supervises their work, and remains responsible for client communications and compliance with applicable professional rules. Team members perform administrative tasks only as directed by your firm and do not provide legal advice.', a_es: 'Los integrantes del equipo firman un acuerdo de confidencialidad antes de comenzar. Tu firma controla su acceso a los sistemas, supervisa su trabajo y sigue siendo responsable de la comunicación con los clientes y del cumplimiento de las normas profesionales aplicables. Los integrantes realizan únicamente tareas administrativas según las indicaciones de tu firma y no brindan asesoría legal.' },
+  { q_en: 'What time zone do they work in?', q_es: '¿En qué zona horaria trabajan?', a_en: 'Colombia is UTC-5, the same as U.S. Eastern Standard Time, with full overlap with Central time. Schedules can be adjusted for Mountain and Pacific.', a_es: 'Colombia está en UTC-5, igual que la hora estándar del Este de EE.UU., con coincidencia total con la hora del Centro. Los horarios se pueden ajustar para las zonas de Montaña y Pacífico.' },
+  { q_en: 'What if the candidate isn’t the right fit?', q_es: '¿Qué pasa si el candidato no es el indicado?', a_en: 'If it’s not the right fit within the first 30 days, we’ll present a replacement candidate at no additional placement fee, per our written service terms.', a_es: 'Si no es la persona indicada dentro de los primeros 30 días, te presentaremos un candidato de reemplazo sin tarifa de colocación adicional, según nuestros términos de servicio por escrito.' },
+  { q_en: 'How do I pay?', q_es: '¿Cómo pago?', a_en: 'Our placement fee is paid once, when your team member starts, and optional ongoing support is billed monthly, in USD by card or bank transfer. You pay your team member directly or through your employer-of-record service.', a_es: 'La tarifa de colocación se paga una sola vez, cuando tu integrante comienza, y el soporte continuo opcional se factura mensualmente, en dólares (USD) con tarjeta o transferencia bancaria. A tu integrante le pagas directamente o a través de tu servicio de employer of record.' },
+  { q_en: 'How is this different from Upwork or Fiverr?', q_es: '¿En qué se diferencia de Upwork o Fiverr?', a_en: 'We vet every candidate for English, reliability and work history. You get one verified professional, not 50 proposals, and if it doesn’t work out, a replacement candidate at no additional placement fee within the first 30 days.', a_es: 'Evaluamos a cada candidato en inglés, confiabilidad e historial laboral. Recibes un profesional verificado, no 50 propuestas, y si no funciona, un candidato de reemplazo sin tarifa de colocación adicional durante los primeros 30 días.' },
 ];
 
 export default function RemoteStaffingPage() {
   const { lang } = useLang();
   const es = lang === 'es';
-  const [form, setForm] = useState({ name: '', email: '', company: '', role: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', company: '', practice: '', role: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState(false);
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   async function submit(e) {
     e.preventDefault();
     setBusy(true);
+    setSendError(false);
     try {
-      await fetch('/api/send-email', {
+      const res = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: 'careers@selectivecrew.com',
           subject: `Remote Staffing Inquiry — ${form.company} (${form.role})`,
-          text: `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\nRole needed: ${form.role}\nMessage: ${form.message}`,
+          text: `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}${form.practice ? `\nPractice area: ${form.practice}` : ''}\nRole needed: ${form.role}\nMessage: ${form.message}`,
         }),
       });
+      // Only a successful response counts; on failure the form keeps its values.
+      if (!res.ok) throw new Error(`send-email ${res.status}`);
       setSubmitted(true);
     } catch {
-      alert('Something went wrong. Please email us at careers@selectivecrew.com');
+      setSendError(true);
     } finally {
       setBusy(false);
     }
@@ -76,36 +87,51 @@ export default function RemoteStaffingPage() {
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px)', backgroundSize: '60px 60px' }} />
         <div style={{ maxWidth: 900, margin: '0 auto', position: 'relative' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(13,148,136,0.15)', border: '1px solid rgba(13,148,136,0.3)', borderRadius: 100, padding: '5px 14px', marginBottom: 20 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#5eead4', letterSpacing: 1.5 }}>SELECTIVE CREW · REMOTE STAFFING</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#5eead4', letterSpacing: 1.5 }}>{es ? 'SELECTIVE CREW · PERSONAL REMOTO PARA FIRMAS DE ABOGADOS' : 'SELECTIVE CREW · REMOTE STAFFING FOR LAW FIRMS'}</span>
           </div>
           <h1 style={{ fontSize: 'clamp(28px,4vw,52px)', fontWeight: 800, color: '#f8f4ec', lineHeight: 1.15, marginBottom: 20 }}>
-            {es ? 'Talento Bilingüe de Latinoamérica' : 'Bilingual Latin American Talent'}<br />
-            <span style={{ color: teal }}>{es ? 'Para Tu Empresa en EE.UU.' : 'For Your U.S. Business'}</span>
+            {es ? 'Soporte bilingüe de admisión' : 'Bilingual intake support'}<br />
+            <span style={{ color: teal }}>{es ? 'para firmas de abogados en EE.UU.' : 'for U.S. law firms.'}</span>
           </h1>
           <p style={{ fontSize: 16, color: 'rgba(248,244,236,0.65)', lineHeight: 1.8, marginBottom: 32, maxWidth: 580 }}>
-            {es ? 'Candidatos bilingües pre-verificados listos para trabajar remoto. Customer service, operaciones, ventas — desde $1,200/mes. Sin fees de colocación.' : 'Pre-vetted bilingual candidates ready to work remotely. Customer service, operations, sales — from $1,200/month. No placement fees.'}
+            {es ? 'Profesionales colombianos con español nativo e inglés evaluado, para ayudar a tu firma con llamadas, agenda y seguimiento a clientes, a un costo menor que una contratación típica en EE.UU.' : 'Native Spanish-speaking, English-tested professionals from Colombia to help your firm handle calls, scheduling and client follow-up, at a lower cost than a typical U.S. hire.'}
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="#contact" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: teal, color: '#fff', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-              {es ? 'Contratar Talento' : 'Hire Remote Talent'}
+            <a href={CAL_LINK} {...(CAL_EXTERNAL ? { target: '_blank', rel: 'noopener noreferrer' } : {})} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: teal, color: '#fff', padding: '14px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+              {es ? 'Agenda una llamada de 15 min' : 'Book a 15-min call'}
             </a>
-            <a href="#roles" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', color: '#f8f4ec', padding: '13px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none', border: '1.5px solid rgba(248,244,236,0.25)' }}>
-              {es ? 'Ver Roles' : 'See Available Roles'}
+            <a href="#contact" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', color: '#f8f4ec', padding: '13px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none', border: '1.5px solid rgba(248,244,236,0.25)' }}>
+              {es ? 'Ver perfiles de candidatos' : 'See candidate profiles'}
             </a>
           </div>
-          <div style={{ display: 'flex', gap: 32, marginTop: 40, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 24, marginTop: 40, flexWrap: 'wrap' }}>
             {[
-              { val: '2,000+', label: es ? 'Profesionales latinoamericanos colocados internacionalmente desde 2009' : 'Latin American professionals placed internationally since 2009' },
-              { val: '17', label: es ? 'Años de Experiencia' : 'Years of Experience' },
-              { val: es ? '48 h' : '48 hrs', label: es ? 'Perfiles de candidatos en 48 horas' : 'Candidate profiles in 48 hours' },
-              { val: '$1,200/mo', label: es ? 'Desde' : 'Starting From' },
+              { val: '2,000+', label: es ? 'Profesionales colocados internacionalmente desde 2009' : 'Professionals placed internationally since 2009' },
+              { val: '17', label: es ? 'Años reclutando talento latinoamericano' : 'Years recruiting Latin American talent' },
+              { val: es ? '48 h' : '48 hrs', label: es ? 'Perfiles de candidatos normalmente en 48 horas' : 'Candidate profiles typically within 48 hours' },
+              { val: '$1,200', label: es ? 'Tarifa única de colocación' : 'One-time placement fee' },
             ].map(s => (
-              <div key={s.val}>
+              <div key={s.val} style={{ maxWidth: 200 }}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#f8f4ec' }}>{s.val}</div>
                 <div style={{ fontSize: 12, color: 'rgba(248,244,236,0.5)', marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* PROBLEM */}
+      <section style={{ padding: '72px 24px', background: '#fff' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#64748b', background: '#f1f5f9', borderRadius: 100, padding: '4px 12px', marginBottom: 12 }}>
+            {es ? 'El Problema' : 'The Problem'}
+          </span>
+          <h2 style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 700, color: navy, marginBottom: 8 }}>
+            {es ? 'Cada llamada sin responder es un caso que no firmaste.' : 'Every unanswered call is a case you didn’t sign.'}
+          </h2>
+          <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.7, maxWidth: 720 }}>
+            {es ? 'Los clientes hispanohablantes llaman cuando necesitan ayuda, y si nadie contesta, llaman a la siguiente firma. Contratar personal bilingüe en EE.UU. es caro y lento. Nuestro equipo bilingüe trabaja en tu horario, en tus sistemas y bajo la supervisión de tu firma.' : 'Spanish-speaking clients call when they need help, and they call the next firm if nobody answers. Hiring bilingual staff in the U.S. is expensive and slow. Our bilingual team members work your hours, in your systems, under your firm’s supervision.'}
+          </p>
         </div>
       </section>
 
@@ -116,10 +142,10 @@ export default function RemoteStaffingPage() {
             {es ? 'Roles Disponibles' : 'Available Roles'}
           </span>
           <h2 style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 700, color: navy, marginBottom: 8 }}>
-            {es ? '¿Qué tipo de talento necesitas?' : 'What type of talent do you need?'}
+            {es ? 'Soporte bilingüe diseñado para firmas de abogados' : 'Bilingual support built for law firms'}
           </h2>
           <p style={{ fontSize: 15, color: '#64748b', marginBottom: 36, lineHeight: 1.7 }}>
-            {es ? 'Cada candidato tiene inglés evaluado y verificación de antecedentes.' : 'Every candidate is English-tested and background-checked.'}
+            {es ? 'Cada candidato es hablante nativo de español con inglés profesional evaluado (C1).' : 'Every candidate is a native Spanish speaker with tested professional English (C1).'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 20 }}>
             {ROLES.map(r => (
@@ -160,14 +186,14 @@ export default function RemoteStaffingPage() {
             {es ? 'Cómo Funciona' : 'How It Works'}
           </span>
           <h2 style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 700, color: navy, marginBottom: 36 }}>
-            {es ? 'Conoce a tus primeros candidatos en 48 horas' : 'Meet your first candidates in 48 hours'}
+            {es ? 'Conoce a tus primeros candidatos, normalmente en 48 horas' : 'Meet your first candidates, typically within 48 hours'}
           </h2>
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 28 }}>
             {[
-              { n: '01', en: 'Tell us what you need', es: 'Cuéntanos qué necesitas', desc_en: 'Fill out the form below — role, tools, hours, budget. Takes 2 minutes.', desc_es: 'Llena el formulario — rol, herramientas, horas, presupuesto. Toma 2 minutos.' },
-              { n: '02', en: 'We match you in 48 hours', es: 'Te hacemos match en 48 horas', desc_en: 'We review our verified candidate pool and send you 1-2 profiles that fit.', desc_es: 'Revisamos nuestro pool verificado y te enviamos 1-2 perfiles.' },
-              { n: '03', en: '2-week trial', es: 'Prueba de 2 semanas', desc_en: 'Your candidate starts working. You evaluate fit, communication, and output.', desc_es: 'Tu candidato comienza. Evalúas fit, comunicación y resultados.' },
-              { n: '04', en: 'Commit or replace — your call', es: 'Continúas o reemplazamos', desc_en: 'If it works, continue at the agreed monthly rate. If not, we replace at no cost.', desc_es: 'Si funciona, continúas. Si no, reemplazamos sin costo.' },
+              { n: '01', en: 'Tell us what you need', es: 'Cuéntanos qué necesitas', desc_en: 'Role, hours, tools and practice area. Takes 2 minutes.', desc_es: 'Rol, horario, herramientas y área de práctica. Toma 2 minutos.' },
+              { n: '02', en: 'Review profiles', es: 'Revisa los perfiles', desc_en: 'Typically within 48 hours, you get 1–2 vetted profiles with a short video introduction.', desc_es: 'Normalmente en 48 horas recibes 1–2 perfiles evaluados con un breve video de presentación.' },
+              { n: '03', en: 'Start working together', es: 'Empiecen a trabajar juntos', desc_en: 'Your team member starts, and you evaluate communication, reliability and results.', desc_es: 'Tu integrante comienza y tú evalúas comunicación, confiabilidad y resultados.' },
+              { n: '04', en: 'Keep or replace', es: 'Continúa o reemplaza', desc_en: 'If it works, they stay on your team. If it’s not the right fit within the first 30 days, we’ll present a replacement candidate at no additional placement fee.', desc_es: 'Si funciona, se queda en tu equipo. Si no es la persona indicada dentro de los primeros 30 días, te presentaremos un candidato de reemplazo sin tarifa de colocación adicional.' },
             ].map((s, i, arr) => (
               <div key={s.n} style={{ display: 'flex', gap: 20, alignItems: 'flex-start', padding: '20px 0', borderBottom: i < arr.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: teal, color: '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.n}</div>
@@ -188,14 +214,14 @@ export default function RemoteStaffingPage() {
             {es ? 'Precios' : 'Pricing'}
           </span>
           <h2 style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 700, color: navy, marginBottom: 36 }}>
-            {es ? 'Simple y transparente' : 'Simple and transparent'}
+            {es ? 'Precios simples y transparentes' : 'Simple, transparent pricing'}
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 20 }}>
             {PLANS.map(p => (
               <div key={p.price} style={{ background: p.hot ? navy : '#fff', border: `1px solid ${p.hot ? teal : '#e2e8f0'}`, borderRadius: 16, padding: 28, position: 'relative' }}>
-                {p.hot && <div style={{ position: 'absolute', top: -10, left: 20, background: teal, color: '#fff', fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 100, letterSpacing: 1 }}>MOST POPULAR</div>}
+                {p.hot && <div style={{ position: 'absolute', top: -10, left: 20, background: teal, color: '#fff', fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 100, letterSpacing: 1 }}>{es ? 'MÁS POPULAR' : 'MOST POPULAR'}</div>}
                 <div style={{ fontSize: 14, fontWeight: 700, color: p.hot ? '#5eead4' : '#64748b', marginBottom: 8 }}>{es ? p.title_es : p.title_en}</div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: p.hot ? '#f8f4ec' : navy, marginBottom: 20 }}>{p.price}</div>
+                <div style={{ fontSize: p.priceSize || 32, fontWeight: 800, color: p.hot ? '#f8f4ec' : navy, marginBottom: 20 }}>{p.price}<span style={{ fontSize: 15, fontWeight: 600 }}>{es ? p.unit_es : p.unit_en}</span></div>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {(es ? p.features_es : p.features_en).map(f => (
                     <li key={f} style={{ display: 'flex', gap: 8, fontSize: 13, color: p.hot ? 'rgba(248,244,236,0.75)' : '#334155' }}>
@@ -207,7 +233,7 @@ export default function RemoteStaffingPage() {
             ))}
           </div>
           <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 16, textAlign: 'center' }}>
-            {es ? 'Sin fee de colocación. Sin contratos largos. Reemplazo gratis en 30 días.' : 'No placement fee. No long contracts. Free replacement within 30 days.'}
+            {es ? 'Sin contratos a largo plazo. Candidato de reemplazo sin tarifa de colocación adicional durante los primeros 30 días, según nuestros términos de servicio por escrito. Los servicios se prestan bajo un acuerdo escrito firmado antes de iniciar cualquier colaboración.' : 'No long-term contracts. Replacement candidate at no additional placement fee within the first 30 days, per our written service terms. Services are provided under a written agreement signed before any engagement begins.'}
           </p>
         </div>
       </section>
@@ -240,20 +266,20 @@ export default function RemoteStaffingPage() {
             {es ? 'Cuéntanos qué necesitas' : 'Tell us what you need'}
           </h2>
           <p style={{ fontSize: 15, color: 'rgba(248,244,236,0.55)', marginBottom: 32, lineHeight: 1.7 }}>
-            {es ? 'Te respondemos en menos de 48 horas con perfiles que se ajustan a tu negocio.' : 'We respond within 48 hours with profiles that fit your business.'}
+            {es ? 'Normalmente respondemos en menos de 48 horas con perfiles que se ajusten a tu firma.' : 'We typically reply within 48 hours with profiles that fit your firm.'}
           </p>
           {submitted ? (
             <div style={{ background: 'rgba(13,148,136,0.12)', border: '1px solid rgba(13,148,136,0.25)', borderRadius: 16, padding: '40px 32px', textAlign: 'center' }}>
               <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#f8f4ec', marginBottom: 10 }}>{es ? '¡Solicitud Recibida!' : 'Request Received!'}</div>
-              <p style={{ fontSize: 14, color: 'rgba(248,244,236,0.65)', lineHeight: 1.7 }}>{es ? 'Te contactaremos en menos de 48 horas.' : 'We will contact you within 48 hours.'}</p>
+              <p style={{ fontSize: 14, color: 'rgba(248,244,236,0.65)', lineHeight: 1.7 }}>{es ? 'Normalmente respondemos en menos de 48 horas.' : 'We typically reply within 48 hours.'}</p>
             </div>
           ) : (
             <form onSubmit={submit} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 { name: 'name', label_en: 'Your name *', label_es: 'Tu nombre *', type: 'text' },
                 { name: 'email', label_en: 'Work email *', label_es: 'Email de trabajo *', type: 'email' },
-                { name: 'company', label_en: 'Company name *', label_es: 'Nombre de la empresa *', type: 'text' },
+                { name: 'company', label_en: 'Firm name *', label_es: 'Nombre de la firma *', type: 'text' },
               ].map(field => (
                 <div key={field.name}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(248,244,236,0.6)', display: 'block', marginBottom: 6 }}>{es ? field.label_es : field.label_en}</label>
@@ -261,13 +287,23 @@ export default function RemoteStaffingPage() {
                 </div>
               ))}
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(248,244,236,0.6)', display: 'block', marginBottom: 6 }}>{es ? 'Rol que necesitas *' : 'Role you need *'}</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(248,244,236,0.6)', display: 'block', marginBottom: 6 }}>{es ? 'Área de práctica (opcional)' : 'Practice area (optional)'}</label>
+                <select name="practice" value={form.practice} onChange={handle} style={{ ...inp, appearance: 'none' }}>
+                  <option value="">{es ? 'Seleccionar' : 'Select practice area'}</option>
+                  <option value="Immigration">{es ? 'Inmigración' : 'Immigration'}</option>
+                  <option value="Personal Injury">{es ? 'Lesiones Personales' : 'Personal Injury'}</option>
+                  <option value="Family Law">{es ? 'Derecho de Familia' : 'Family Law'}</option>
+                  <option value="Other">{es ? 'Otro' : 'Other'}</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(248,244,236,0.6)', display: 'block', marginBottom: 6 }}>{es ? 'Rol que necesitas *' : 'Role needed *'}</label>
                 <select name="role" value={form.role} onChange={handle} required style={{ ...inp, appearance: 'none' }}>
                   <option value="">{es ? 'Seleccionar' : 'Select role'}</option>
-                  <option value="Customer Service">{es ? 'Servicio al Cliente Bilingüe' : 'Bilingual Customer Service'}</option>
-                  <option value="E-commerce Operations">{es ? 'Operaciones E-commerce' : 'E-commerce Operations'}</option>
-                  <option value="Virtual Assistant">{es ? 'Asistente Virtual' : 'Virtual Assistant'}</option>
-                  <option value="Sales Development">{es ? 'Desarrollo de Ventas' : 'Sales Development Rep'}</option>
+                  <option value="Intake Specialist">{es ? 'Especialista de Admisión' : 'Intake Specialist'}</option>
+                  <option value="Legal Receptionist">{es ? 'Recepcionista Legal' : 'Legal Receptionist'}</option>
+                  <option value="Case Follow-up">{es ? 'Seguimiento de Casos' : 'Case Follow-up'}</option>
+                  <option value="Admin & CRM">{es ? 'Administrativo y CRM' : 'Admin & CRM'}</option>
                   <option value="Other">{es ? 'Otro' : 'Other'}</option>
                 </select>
               </div>
@@ -276,14 +312,32 @@ export default function RemoteStaffingPage() {
                 <textarea name="message" value={form.message} onChange={handle} rows={3} style={{ ...inp, resize: 'none', fontFamily: 'inherit' }} />
               </div>
               <button type="submit" disabled={busy} style={{ width: '100%', background: busy ? '#64748b' : teal, color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>
-                {busy ? (es ? 'Enviando...' : 'Sending...') : (es ? 'Solicitar Candidatos' : 'Request Candidates')}
+                {busy ? (es ? 'Enviando...' : 'Sending...') : (es ? 'Solicitar candidatos' : 'Request candidates')}
               </button>
+              {sendError && (
+                <p role="alert" style={{ fontSize: 13, color: '#fecaca', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8, padding: '10px 12px', margin: 0, lineHeight: 1.6 }}>
+                  {es ? 'Lo sentimos, tu solicitud no pudo enviarse. Intenta de nuevo o escríbenos a careers@selectivecrew.com.' : 'Sorry, your request couldn’t be sent. Please try again or email us at careers@selectivecrew.com.'}
+                </p>
+              )}
               <p style={{ fontSize: 12, color: 'rgba(248,244,236,0.3)', textAlign: 'center', margin: 0 }}>
-                {es ? 'Sin compromiso. Te respondemos en 48 horas.' : 'No commitment. We respond within 48 hours.'}
+                {es ? 'Sin compromiso.' : 'No commitment.'}
               </p>
             </form>
           )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
+            <span style={{ fontSize: 14, color: 'rgba(248,244,236,0.55)' }}>{es ? '¿Prefieres hablar?' : 'Prefer to talk?'}</span>
+            <a href={CAL_LINK} {...(CAL_EXTERNAL ? { target: '_blank', rel: 'noopener noreferrer' } : {})} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', color: '#f8f4ec', padding: '11px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none', border: '1.5px solid rgba(248,244,236,0.25)' }}>
+              {es ? 'Agenda una llamada de 15 min' : 'Book a 15-min call'}
+            </a>
+          </div>
         </div>
+      </section>
+
+      {/* DISCLAIMER */}
+      <section style={{ padding: '32px 24px', background: '#f8fafc' }}>
+        <p style={{ maxWidth: 900, margin: '0 auto', fontSize: 12, color: '#64748b', lineHeight: 1.7 }}>
+          {es ? 'Selective Crew presta servicios de reclutamiento y coordinación de personal y no es una firma de abogados. Las firmas clientes dirigen y supervisan todo el trabajo realizado y son las únicas responsables de la asesoría legal, la relación con sus clientes, la protección de datos y el cumplimiento de las normas profesionales y legales aplicables. No se garantizan resultados. Los servicios se prestan bajo un acuerdo escrito firmado antes de iniciar cualquier colaboración.' : 'Selective Crew provides recruitment and staffing coordination services and is not a law firm. Client firms direct and supervise all work performed and remain solely responsible for legal advice, client relationships, data protection and compliance with applicable professional and legal rules. Results are not guaranteed. Services are provided under a written agreement signed before any engagement begins.'}
+        </p>
       </section>
 
     </div>
