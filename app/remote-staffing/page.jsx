@@ -6,9 +6,9 @@ import { useLang } from '../../lib/LanguageContext';
 const navy = "#0a1628";
 const teal = "#0d9488";
 
-// "Book a 15-min call" target. Points to the form until a Cal.com URL exists;
-// set it to the https:// booking URL and the buttons open it in a new tab.
-const CAL_LINK = '#contact';
+// "Book a 15-min call" target. An https:// URL opens in a new tab;
+// '#contact' would point the buttons back to the form.
+const CAL_LINK = 'https://cal.com/selectivecrew-staffing/intro-call';
 const CAL_EXTERNAL = CAL_LINK.startsWith('http');
 
 const ROLES = [
