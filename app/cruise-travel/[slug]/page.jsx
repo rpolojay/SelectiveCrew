@@ -7,8 +7,8 @@ const articles = {
     description: 'A clear introduction to planning your first cruise, from choosing an itinerary and cabin to embarkation day and budgeting.',
     category: 'START HERE',
     minutes: '8 min read',
-    image: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1800&q=85',
-    imageAlt: 'Cruise ship sailing across blue ocean water',
+    image: '/images/cruise-travel/first-time-pool-deck.jpg',
+    imageAlt: 'Passengers enjoying a sunny pool deck on a cruise ship',
     intro: 'A first cruise can feel like several trips in one: transport, accommodation, dining, entertainment, and visits to multiple destinations. A little preparation makes the choices easier.',
     sections: [
       { heading: '1. Start with the itinerary', paragraphs: ['Choose the places you want to visit and the amount of time you want to spend ashore. Compare port times, the number of sea days, departure ports, and the season you plan to travel.', 'Check whether you need visas, entry authorizations, or other travel documents for every country on the route. Requirements depend on your nationality, itinerary, and current rules, so confirm them with official sources before paying.'] },
@@ -24,8 +24,9 @@ const articles = {
     description: 'How to compare Caribbean cruise ports by beaches, culture, nature, activities, and the style of trip you want.',
     category: 'DESTINATION GUIDE',
     minutes: '7 min read',
-    image: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1800&q=85',
-    imageAlt: 'Tropical coastline and clear blue water',
+    hero: 'light',
+    image: '/images/cruise-travel/caribbean-crab-cay.jpg',
+    imageAlt: 'Crab Cay islet in turquoise Caribbean water near Providencia island',
     intro: 'There is no single best Caribbean itinerary for everyone. The right route depends on whether you want relaxed beaches, local food and history, active excursions, or a mix of experiences.',
     sections: [
       { heading: 'Eastern Caribbean: island variety', paragraphs: ['Eastern Caribbean itineraries may include destinations known for beaches, sailing, island scenery, and a mix of French, Dutch, British, and other cultural influences. Compare the actual ports rather than choosing by region name alone.', 'Look at how long the ship stays in each port and whether the activities you want are close to the pier or require longer transfers.'] },
@@ -40,8 +41,8 @@ const articles = {
     description: 'Compare cruise lines by atmosphere, ship size, itinerary, onboard inclusions, dining, entertainment, and overall budget.',
     category: 'CRUISE PLANNING',
     minutes: '6 min read',
-    image: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=1800&q=85',
-    imageAlt: 'Large cruise ship viewed from the water',
+    image: '/images/cruise-travel/cruise-line-ship-port.jpg',
+    imageAlt: 'Large cruise ship docked at a tropical port under a clear sky',
     intro: 'Cruise lines differ in atmosphere, ship design, dining, entertainment, service style, itinerary, and pricing. Start with the experience you want rather than assuming that the biggest ship or lowest fare is automatically the best fit.',
     sections: [
       { heading: '1. Decide what kind of trip you want', paragraphs: ['Think about your priorities: family activities, quiet spaces, nightlife, destination-focused travel, premium service, expedition experiences, or a relaxed trip with few decisions to make.', 'Read the itinerary and onboard activity descriptions for the specific ship and sailing. Experiences can vary within the same cruise line.'] },
@@ -74,7 +75,7 @@ export async function generateMetadata({ params }) {
       url: canonical,
       siteName: 'Selective Crew',
       type: 'article',
-      images: [{ url: article.image, alt: article.imageAlt }],
+      images: [{ url: 'https://selectivecrew.com' + article.image, alt: article.imageAlt }],
     },
   };
 }
@@ -84,13 +85,20 @@ export default async function CruiseTravelArticlePage({ params }) {
   const article = articles[slug];
   if (!article) notFound();
   const relatedSlugs = Object.keys(articles).filter((s) => s !== slug);
+  const lightHero = article.hero === 'light';
+  const heroOverlay = lightHero
+    ? 'linear-gradient(0deg, rgba(7,23,41,.34) 0%, rgba(7,23,41,.18) 45%, rgba(7,23,41,.18) 100%)'
+    : 'linear-gradient(0deg, rgba(7,23,41,.88), rgba(7,23,41,.05))';
+  const heroKickerShadow = lightHero ? '0 1px 8px rgba(7,23,41,.60)' : undefined;
+  const heroTitleShadow = lightHero ? '0 2px 18px rgba(7,23,41,.55), 0 1px 4px rgba(7,23,41,.65)' : undefined;
+  const heroDescShadow = lightHero ? '0 1px 10px rgba(7,23,41,.60)' : undefined;
 
   const schema = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: article.title,
     description: article.description,
-    image: article.image,
+    image: 'https://selectivecrew.com' + article.image,
     author: { '@type': 'Organization', name: 'Selective Crew', url: 'https://selectivecrew.com' },
     publisher: { '@type': 'Organization', name: 'Selective Crew', url: 'https://selectivecrew.com' },
     mainEntityOfPage: `https://selectivecrew.com/cruise-travel/${slug}`,
@@ -100,11 +108,11 @@ export default async function CruiseTravelArticlePage({ params }) {
     <main style={{ background: '#fff', color: '#10253d', minHeight: '70vh' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: schema }} />
       <div style={{ position: 'relative', minHeight: 360, display: 'flex', alignItems: 'end', background: '#10253d', overflow: 'hidden' }}>
-        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(0deg, rgba(7,23,41,.88), rgba(7,23,41,.05)), url('${article.image}')`, backgroundPosition: 'center', backgroundSize: 'cover' }} />
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: `${heroOverlay}, url('${article.image}')`, backgroundPosition: 'center', backgroundSize: 'cover' }} />
         <div style={{ position: 'relative', maxWidth: 900, width: '100%', margin: '0 auto', padding: '70px 24px 42px' }}>
-          <p style={{ color: '#8fe1df', fontSize: 11, fontWeight: 800, letterSpacing: 2, margin: '0 0 14px' }}>{article.category} · {article.minutes}</p>
-          <h1 style={{ color: '#fff', fontFamily: 'Georgia, serif', fontSize: 'clamp(34px, 5vw, 56px)', fontWeight: 500, lineHeight: 1.12, maxWidth: 800, margin: '0 0 14px' }}>{article.title}</h1>
-          <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 16, lineHeight: 1.75, maxWidth: 700, margin: 0 }}>{article.description}</p>
+          <p style={{ color: '#8fe1df', fontSize: 11, fontWeight: 800, letterSpacing: 2, margin: '0 0 14px', textShadow: heroKickerShadow }}>{article.category} · {article.minutes}</p>
+          <h1 style={{ color: '#fff', fontFamily: 'Georgia, serif', fontSize: 'clamp(34px, 5vw, 56px)', fontWeight: 500, lineHeight: 1.12, maxWidth: 800, margin: '0 0 14px', textShadow: heroTitleShadow }}>{article.title}</h1>
+          <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 16, lineHeight: 1.75, maxWidth: 700, margin: 0, textShadow: heroDescShadow }}>{article.description}</p>
         </div>
       </div>
 

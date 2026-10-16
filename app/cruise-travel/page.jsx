@@ -6,8 +6,8 @@ const guides = [
     category: 'START HERE',
     title: 'Your First Cruise: A Practical Planning Guide',
     description: 'Understand what to book, what to pack, how embarkation works, and which extra costs to plan for before you sail.',
-    image: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1400&q=85',
-    imageAlt: 'Cruise ship sailing across blue ocean water',
+    image: '/images/cruise-travel/first-time-pool-deck.jpg',
+    imageAlt: 'Passengers enjoying a sunny pool deck on a cruise ship',
     read: '8 min read',
   },
   {
@@ -15,8 +15,8 @@ const guides = [
     category: 'DESTINATION GUIDE',
     title: 'Caribbean Cruise Destinations Worth Exploring',
     description: 'Compare island experiences, beaches, culture, nature, and shore excursions as you plan a Caribbean itinerary.',
-    image: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1400&q=85',
-    imageAlt: 'Tropical Caribbean coastline with turquoise water',
+    image: '/images/cruise-travel/caribbean-crab-cay.jpg',
+    imageAlt: 'Crab Cay islet in turquoise Caribbean water near Providencia island',
     read: '7 min read',
   },
   {
@@ -24,8 +24,8 @@ const guides = [
     category: 'CRUISE PLANNING',
     title: 'How to Choose the Right Cruise Line for You',
     description: 'Match your travel style, budget, preferred onboard atmosphere, and itinerary to the cruise experience that suits you.',
-    image: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=1400&q=85',
-    imageAlt: 'Large cruise ship viewed from the water',
+    image: '/images/cruise-travel/cruise-line-ship-port.jpg',
+    imageAlt: 'Large cruise ship docked at a tropical port under a clear sky',
     read: '6 min read',
   },
 ];
@@ -38,7 +38,7 @@ export default function CruiseTravelPage() {
   return (
     <main style={{ background: '#f7f8f5', color: ink, minHeight: '70vh' }}>
       <section style={{ position: 'relative', minHeight: 470, display: 'flex', alignItems: 'center', overflow: 'hidden', background: '#10253d' }}>
-        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: "linear-gradient(90deg, rgba(7,23,41,.88) 0%, rgba(7,23,41,.62) 48%, rgba(7,23,41,.08) 100%), url('https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=2200&q=90')", backgroundPosition: 'center 54%', backgroundSize: 'cover' }} />
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: "linear-gradient(90deg, rgba(7,23,41,.88) 0%, rgba(7,23,41,.62) 48%, rgba(7,23,41,.08) 100%), url('/images/cruise-travel/hero-nassau-port.jpg')", backgroundPosition: 'center 54%', backgroundSize: 'cover' }} />
         <div style={{ position: 'relative', maxWidth: 1180, width: '100%', margin: '0 auto', padding: '84px 24px 90px' }}>
           <p style={{ color: '#8fe1df', fontSize: 12, letterSpacing: 3, fontWeight: 800, marginBottom: 18 }}>THE CRUISE TRAVEL EDIT</p>
           <h1 style={{ color: '#fff', fontFamily: 'Georgia, serif', fontSize: 'clamp(38px, 6vw, 70px)', lineHeight: 1.04, maxWidth: 720, fontWeight: 500, margin: '0 0 22px' }}>Find your next horizon.</h1>
