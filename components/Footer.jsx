@@ -24,7 +24,7 @@ export default function Footer() {
       ]
     : [
         { title: tx.footer_candidates, links: [{href:'/jobs',label:tx.footer_find_jobs},{href:'/talent-pool',label:tx.footer_create_profile},{href:'/training',label:'Training'},{href:'/apply',label:es?'Aplicar':'Apply Now'}] },
-        { title: tx.footer_company, links: [{href:'/about',label:tx.footer_about},{href:'/contact',label:tx.footer_contact},{href:'/blog',label:'Blog'},{href:'/employers',label:tx.footer_employers}] },
+        { title: tx.footer_company, links: [{href:'/about',label:tx.footer_about},{href:'/contact',label:tx.footer_contact},{href:'/blog',label:'Blog'},{href:'/cruise-travel',label:es?'Viajes en Crucero':'Cruise Travel'},{href:'/employers',label:tx.footer_employers}] },
         { title: tx.footer_legal, links: [{href:'/privacy',label:tx.footer_privacy},{href:'/grievance',label:es?'Política de Quejas':'Grievance Policy'},{href:'/terms',label:tx.footer_terms}] },
       ];
 

@@ -46,6 +46,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/blog/after-cruise-ship-job-offer`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/blog/cruise-ship-jobs-peru-ecuador-chile`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
 
+    // Cruise travel
+    { url: `${base}/cruise-travel`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${base}/cruise-travel/first-time-cruise-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/cruise-travel/best-caribbean-cruise-destinations`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/cruise-travel/how-to-choose-a-cruise-line`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+
     // Training
     { url: `${base}/training`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
 

@@ -69,6 +69,7 @@ export default function Navbar() {
     { href: '/documents', label: lang === 'es' ? 'Subir Documentos' : 'Submit Documents', sub: lang === 'es' ? 'Portal de documentos' : 'Secure document portal' },
   { href: '/training',  label: lang === 'es' ? 'Formacion' : 'Training', highlight: true },
   { href: '/resources', label: lang === 'es' ? 'Recursos' : 'Resources' },
+  { href: '/cruise-travel', label: lang === 'es' ? 'Viajes en Crucero' : 'Cruise Travel' },
   ];
 
   if (pathname && pathname.startsWith('/portal')) return null;
