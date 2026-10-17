@@ -7,8 +7,9 @@ const articles = {
     description: 'A clear introduction to planning your first cruise, from choosing an itinerary and cabin to embarkation day and budgeting.',
     category: 'START HERE',
     minutes: '8 min read',
-    image: '/images/cruise-travel/first-time-pool-deck.jpg',
-    imageAlt: 'Passengers enjoying a sunny pool deck on a cruise ship',
+    hero: 'light',
+    image: '/images/cruise-travel/first-time-cruise-interior.jpg',
+    imageAlt: 'Elegant cruise ship atrium with a grand illuminated glass staircase and crystal chandelier',
     intro: 'A first cruise can feel like several trips in one: transport, accommodation, dining, entertainment, and visits to multiple destinations. A little preparation makes the choices easier.',
     sections: [
       { heading: '1. Start with the itinerary', paragraphs: ['Choose the places you want to visit and the amount of time you want to spend ashore. Compare port times, the number of sea days, departure ports, and the season you plan to travel.', 'Check whether you need visas, entry authorizations, or other travel documents for every country on the route. Requirements depend on your nationality, itinerary, and current rules, so confirm them with official sources before paying.'] },
@@ -41,8 +42,9 @@ const articles = {
     description: 'Compare cruise lines by atmosphere, ship size, itinerary, onboard inclusions, dining, entertainment, and overall budget.',
     category: 'CRUISE PLANNING',
     minutes: '6 min read',
-    image: '/images/cruise-travel/cruise-line-ship-port.jpg',
-    imageAlt: 'Large cruise ship docked at a tropical port under a clear sky',
+    hero: 'light',
+    image: '/images/cruise-travel/cruise-line-ship-aerial.jpg',
+    imageAlt: 'Aerial view of a full cruise ship sailing in vivid blue ocean water',
     intro: 'Cruise lines differ in atmosphere, ship design, dining, entertainment, service style, itinerary, and pricing. Start with the experience you want rather than assuming that the biggest ship or lowest fare is automatically the best fit.',
     sections: [
       { heading: '1. Decide what kind of trip you want', paragraphs: ['Think about your priorities: family activities, quiet spaces, nightlife, destination-focused travel, premium service, expedition experiences, or a relaxed trip with few decisions to make.', 'Read the itinerary and onboard activity descriptions for the specific ship and sailing. Experiences can vary within the same cruise line.'] },

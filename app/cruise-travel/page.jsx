@@ -6,8 +6,8 @@ const guides = [
     category: 'START HERE',
     title: 'Your First Cruise: A Practical Planning Guide',
     description: 'Understand what to book, what to pack, how embarkation works, and which extra costs to plan for before you sail.',
-    image: '/images/cruise-travel/first-time-pool-deck.jpg',
-    imageAlt: 'Passengers enjoying a sunny pool deck on a cruise ship',
+    image: '/images/cruise-travel/first-time-cruise-interior.jpg',
+    imageAlt: 'Elegant cruise ship atrium with a grand illuminated glass staircase and crystal chandelier',
     read: '8 min read',
   },
   {
@@ -24,8 +24,8 @@ const guides = [
     category: 'CRUISE PLANNING',
     title: 'How to Choose the Right Cruise Line for You',
     description: 'Match your travel style, budget, preferred onboard atmosphere, and itinerary to the cruise experience that suits you.',
-    image: '/images/cruise-travel/cruise-line-ship-port.jpg',
-    imageAlt: 'Large cruise ship docked at a tropical port under a clear sky',
+    image: '/images/cruise-travel/cruise-line-ship-aerial.jpg',
+    imageAlt: 'Aerial view of a full cruise ship sailing in vivid blue ocean water',
     read: '6 min read',
   },
 ];
