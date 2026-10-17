@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { randomInt } from 'node:crypto';
 import { getAdminAuth, getAdminDb, requireAdmin } from '../../../lib/firebaseAdmin';
 import { ADMIN_EMAILS } from '../../../lib/adminAccess';
 
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   let out = '';
-  for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 12; i++) out += chars[randomInt(chars.length)];
   return out + '!';
 }
 
@@ -71,6 +72,18 @@ export async function POST(request) {
       if (err.code === 'auth/email-already-exists') {
         userRecord = await adminAuth.getUserByEmail(email);
         if (userRecord.customClaims?.admin === true) return adminAccountError();
+        // Never silently move an account between clients: if this email is
+        // already assigned to a different client portal (via the Auth custom
+        // claim or the portalUsers doc), refuse instead of resetting their
+        // password or re-pointing their access. Same-client re-invites and
+        // accounts with no client assignment proceed below. The response
+        // names no other client, so nothing leaks to non-admin callers.
+        const puDoc = await adminDb.collection('portalUsers').doc(userRecord.uid).get();
+        const docSlug = puDoc.exists ? puDoc.data().clientSlug : null;
+        const claimSlug = userRecord.customClaims?.clientSlug || null;
+        if ((docSlug && docSlug !== clientSlug) || (claimSlug && claimSlug !== clientSlug)) {
+          return NextResponse.json({ error: 'This email is already assigned to a different client portal. Remove that access in Client Management first, or invite a different email address.' }, { status: 409 });
+        }
         // Sending an invite always re-issues a fresh password so the
         // credential in the email is guaranteed to actually work, even for
         // a pre-existing account. Plain create/link calls (sendInvite

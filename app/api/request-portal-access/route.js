@@ -176,7 +176,10 @@ export async function POST(request) {
       // clientSlug lives on the ID token as a custom claim so Firestore
       // rules can scope this user's reads (see firestore.rules); the
       // portalUsers doc below is kept too, for the admin UI listing.
-      await adminAuth.setCustomUserClaims(userRecord.uid, { clientSlug: cruiseLine });
+      // Preserve unrelated claims; this endpoint only controls clientSlug
+      // (mirrors POST /api/portal-users). For the freshly created user above
+      // the spread is a no-op, so the result is { clientSlug } as before.
+      await adminAuth.setCustomUserClaims(userRecord.uid, { ...(userRecord.customClaims || {}), clientSlug: cruiseLine });
 
       const clientDoc = adminDb.collection('clients').doc(cruiseLine);
       const clientSnap = await clientDoc.get();
@@ -190,6 +193,7 @@ export async function POST(request) {
 
       await docRef.update({ status: 'completed', processedAt: new Date(), uid: userRecord.uid });
 
+      let welcomeEmailSent = true;
       try {
         await sendEmail({
           to: email,
@@ -197,7 +201,26 @@ export async function POST(request) {
           html: elegantEmail('\u{1F511}', 'Selective Crew', 'Pipeline Portal Access', welcomeEmailBody({ name, cruiseLineLabel, portalUrl, email, password })),
         });
       } catch (e) {
+        welcomeEmailSent = false;
         console.error('Failed to send welcome email:', e);
+        // Boolean delivery status only: no provider error text is persisted,
+        // and the temporary password is never written to Firestore, logs, or
+        // the response page below.
+        await docRef.update({ welcomeEmailSent: false });
+      }
+
+      // Provisioning above succeeded; only email delivery failed. Never claim
+      // the email was sent in that case. The approver can re-issue
+      // credentials via Admin > Client Management > Send Invite once email
+      // delivery is working, so no password needs to appear on this page.
+      if (!welcomeEmailSent) {
+        return htmlPage(
+          '<div style="font-size:40px;margin-bottom:12px">⚠️</div>' +
+          '<p style="font-size:15px;color:#92400e;font-weight:700;margin:0 0 8px">Portal access created, but the welcome email failed to send</p>' +
+          '<p style="font-size:14px;color:#374151;line-height:1.7">The account for ' + escapeHtml(email) + ' was created, but the login instructions could not be delivered by email. No credentials were sent.</p>' +
+          '<p style="font-size:14px;color:#374151;line-height:1.7">To deliver access, open Admin, then Client Management, and use Send Invite for ' + escapeHtml(cruiseLineLabel) + ' once email delivery is working.</p>',
+          200
+        );
       }
 
       return htmlPage(
