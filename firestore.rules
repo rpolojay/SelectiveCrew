@@ -45,6 +45,42 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['portalClientSlug', 'cruiseLine']) &&
         !('portalClientSlug' in request.resource.data) && !('cruiseLine' in request.resource.data);
     }
+    // Server-managed client lifecycle (see /api/clients): deactivation sets
+    // clients/{slug}.active=false and detaches assignments server-side, so
+    // already-issued ID tokens stop matching anything. Compatibility: a
+    // missing `active` flag means active (pre-deactivation records need no
+    // migration); revoked assignments live in `portalAssignmentRevoked`.
+    // get()/exists() appear ONLY in single-document rules below
+    // (portalUsers get, applications create/update). They NEVER appear in
+    // applications get/list: list rules evaluate per candidate document and
+    // would hit Firestore's document-access-call limit (see note above),
+    // silently denying queries -- including the admin full-list query, which
+    // short-circuits on isAdmin() before any get() could run.
+    function clientIsActive(slug) {
+      let ref = /databases/$(database)/documents/clients/$(slug);
+      return exists(ref) && (!('active' in get(ref).data) || get(ref).data.active == true);
+    }
+    // Assignment writes may only target existing, active clients. Both
+    // fields are reserved for assignment (public creates cannot include them).
+    function newAssignmentTargetsActive() {
+      return (
+        (!('portalClientSlug' in request.resource.data) ||
+          clientIsActive(request.resource.data.portalClientSlug)) &&
+        (!('cruiseLine' in request.resource.data) ||
+          clientIsActive(request.resource.data.cruiseLine))
+      );
+    }
+    function changedAssignmentTargetsActive() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return (
+        (!changed.hasAny(['portalClientSlug']) ||
+          !('portalClientSlug' in request.resource.data) ||
+          clientIsActive(request.resource.data.portalClientSlug)) &&
+        (!changed.hasAny(['cruiseLine']) ||
+          !('cruiseLine' in request.resource.data) ||
+          clientIsActive(request.resource.data.cruiseLine))
+      );
+    }
     function isPublicConfirmationUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'videoWatched', 'videoWatchedAt', 'omniaCompleted', 'omniaCompletedAt',
@@ -67,19 +103,23 @@ service cloud.firestore {
       allow list: if isAdmin() || (isPortalUser() && isAssignedToPortalClient());
       // Public application forms may create candidates, but cannot assign
       // those records to a client portal. Trusted admin/server paths assign them.
-      allow create: if isAdmin() || (!isPortalUser() &&
+      allow create: if (isAdmin() && newAssignmentTargetsActive()) || (!isPortalUser() &&
         !('portalClientSlug' in request.resource.data) && !('cruiseLine' in request.resource.data));
       allow delete: if isAdmin();
-      allow update: if isAdmin() ||
+      allow update: if (isAdmin() && changedAssignmentTargetsActive()) ||
         (isPortalUser() && isAssignedToPortalClient() && (isPortalFieldUpdate() || isPortalUnassignment()));
     }
+    // Lifecycle (active flag, safe delete) is managed server-side via
+    // /api/clients; reads stay public for portal login branding.
     match /clients/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
     match /portalUsers/{docId} {
-      allow read: if isAdmin() ||
-        (isPortalUser() && request.auth.uid == docId && resource.data.clientSlug == portalClientSlug());
+      allow get: if isAdmin() ||
+        (isPortalUser() && request.auth.uid == docId && resource.data.clientSlug == portalClientSlug() &&
+          clientIsActive(resource.data.clientSlug));
+      allow list: if isAdmin();
       allow write: if false; // managed only via the /api/portal-users server route (Admin SDK)
     }
     match /placements/{docId} {

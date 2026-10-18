@@ -19,6 +19,15 @@ const CRUISE_LINES = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Approval links live 48 hours from filing. A claim lease this old is
+// considered abandoned (crashed approver, lost response) and may be taken
+// over by a fresh approval POST; recovery is always safe because
+// provisioning steps are idempotent and the grant marker distinguishes our
+// own interrupted users from foreign accounts (see below).
+const APPROVAL_LINK_TTL_MS = 48 * 60 * 60 * 1000;
+const PROCESSING_LEASE_MS = 15 * 60 * 1000;
+const APPROVAL_EXPIRED_TEXT = 'This approval link expired after 48 hours. No account was created. Please ask the requester to submit a new request.';
+
 // Every value interpolated into HTML (pages and emails) goes through this,
 // including stored request data. '$' is encoded too because elegantEmail()
 // inserts content with String.replace, which treats '$&', '$$', etc. in the
@@ -27,6 +36,35 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"'$]/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '$': '&#36;',
   })[char]);
+}
+
+function msOfTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  return 0;
+}
+
+// Requests filed before expiry existed carry no expiresAt: they expire 48h
+// after createdAt. A request with neither timestamp is treated as expired
+// (fail closed).
+function approvalExpiryMs(data) {
+  const explicit = msOfTimestamp(data.expiresAt);
+  if (explicit > 0) return explicit;
+  const created = msOfTimestamp(data.createdAt);
+  if (created > 0) return created + APPROVAL_LINK_TTL_MS;
+  return 0;
+}
+
+function isExpiredData(data, now = Date.now()) {
+  const expiry = approvalExpiryMs(data);
+  return expiry <= 0 || now >= expiry;
+}
+
+function processingLeaseValid(data, now = Date.now()) {
+  return msOfTimestamp(data.processingLeaseExpiresAt) > now;
 }
 
 // This form is public and unauthenticated, so account creation is never
@@ -99,7 +137,7 @@ function notifyEmailBody(fields) {
     '<div style="text-align:center">' +
       '<a href="' + confirmUrl + '" style="display:inline-block;background:linear-gradient(135deg,#0a1628,#0e4d8a);color:#fff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none">Review Request &#8594;</a>' +
     '</div>' +
-    '<p style="font-size:12px;color:#aaa;margin-top:20px">Nothing is created until you confirm on that page.</p>'
+    '<p style="font-size:12px;color:#aaa;margin-top:20px">Nothing is created until you confirm on that page. The link expires 48 hours after the request was filed.</p>'
   );
 }
 
@@ -143,63 +181,149 @@ export async function POST(request) {
     // provision access. This is the only path that touches Auth/Firestore.
     if (confirmId && confirmToken) {
       const docRef = adminDb.collection('portalAccessRequests').doc(confirmId);
-      const snap = await docRef.get();
-      if (!snap.exists) return htmlPage('<p style="font-size:15px;color:#0a1628">This request no longer exists.</p>', 404);
+      // Single-use claim: exactly one approval POST may provision this
+      // request. The transaction serializes concurrent duplicates, which
+      // then observe 'processing' (or a terminal state) and provision
+      // nothing -- no duplicate users, no duplicate emails.
+      const claim = await adminDb.runTransaction(async (transaction) => {
+        const snap = await transaction.get(docRef);
+        if (!snap.exists) return { outcome: 'gone' };
+        const current = snap.data();
+        if (current.approveToken !== confirmToken) return { outcome: 'invalid' };
+        if (current.status === 'processing' && processingLeaseValid(current)) {
+          return { outcome: 'busy' };
+        }
+        if (current.status !== 'pending' && current.status !== 'processing') {
+          return { outcome: 'done' };
+        }
+        if (isExpiredData(current)) {
+          transaction.update(docRef, { status: 'expired', processedAt: new Date() });
+          return { outcome: 'expired' };
+        }
+        // grantId is minted once and never changes, so any later claim of
+        // the same request can prove which Auth user it created.
+        const grantId = current.grantId || crypto.randomBytes(12).toString('hex');
+        transaction.update(docRef, {
+          status: 'processing',
+          grantId,
+          processingLeaseExpiresAt: new Date(Date.now() + PROCESSING_LEASE_MS),
+          processingAttempts: Number(current.processingAttempts || 0) + 1,
+        });
+        return { outcome: 'claimed', grantId, data: current };
+      });
 
-      const data = snap.data();
-      if (data.approveToken !== confirmToken) return htmlPage('<p style="font-size:15px;color:#0a1628">Invalid approval link.</p>', 403);
-      if (data.status !== 'pending') return htmlPage('<p style="font-size:15px;color:#0a1628">This request has already been processed.</p>', 200);
+      if (claim.outcome === 'gone') return htmlPage('<p style="font-size:15px;color:#0a1628">This request no longer exists.</p>', 404);
+      if (claim.outcome === 'invalid') return htmlPage('<p style="font-size:15px;color:#0a1628">Invalid approval link.</p>', 403);
+      if (claim.outcome === 'done') return htmlPage('<p style="font-size:15px;color:#0a1628">This request has already been processed.</p>', 200);
+      if (claim.outcome === 'busy') return htmlPage('<p style="font-size:15px;color:#0a1628">This request is already being processed. Please wait a moment and try again.</p>', 200);
+      if (claim.outcome === 'expired') return htmlPage('<p style="font-size:15px;color:#0a1628">' + APPROVAL_EXPIRED_TEXT + '</p>', 200);
 
-      const { name, company, cruiseLine } = data;
-      const email = String(data.email || '').trim().toLowerCase();
+      // This process owns the only valid claim: provision below.
+      const { name, company, cruiseLine } = claim.data;
+      const email = String(claim.data.email || '').trim().toLowerCase();
       // Requests filed before the public-form checks existed are re-checked
       // here: never provision an administrator address or an unknown client.
       if (ADMIN_EMAILS.includes(email) || !EMAIL_RE.test(email) || !CRUISE_LINES[cruiseLine]) {
         await docRef.update({ status: 'error', error: 'Request not eligible for portal access', processedAt: new Date() });
         return htmlPage('<p style="font-size:15px;color:#0a1628">This request cannot be approved. No account was created.</p>', 409);
       }
+      // Approvals never grant access to a deactivated client. A missing
+      // `active` flag means active (pre-deactivation records); unknown
+      // clients are still auto-created below.
+      const preClientSnap = await adminDb.collection('clients').doc(cruiseLine).get();
+      if (preClientSnap.exists && preClientSnap.data().active === false) {
+        await docRef.update({ status: 'error', error: 'Client is deactivated', processedAt: new Date() });
+        return htmlPage('<p style="font-size:15px;color:#0a1628">This client is deactivated. No account was created &mdash; reactivate the client or invite the user directly.</p>', 409);
+      }
       const cruiseLineLabel = CRUISE_LINES[cruiseLine];
       const adminAuth = getAdminAuth();
       const portalUrl = SITE_ORIGIN + '/portal/' + encodeURIComponent(cruiseLine);
 
-      // Never touch an existing account's password/access - a pre-existing
-      // account for this email needs a human to sort out, not an overwrite.
-      let existing = null;
-      try { existing = await adminAuth.getUserByEmail(email); } catch (e) { /* not found is expected */ }
-      if (existing) {
-        await docRef.update({ status: 'error', error: 'Email already has an account', processedAt: new Date() });
-        return htmlPage('<p style="font-size:15px;color:#0a1628">An account for <strong>' + escapeHtml(email) + '</strong> already exists. No new account was created &mdash; please handle this one manually.</p>', 409);
+      // Resolve the account. A pre-existing account is finished only when it
+      // is provably ours (an interrupted attempt of THIS grant, via the grant
+      // marker or the recorded uid); anything else is foreign and needs a
+      // human, exactly as before -- its password and access stay untouched.
+      let userRecord;
+      let password = null;
+      let sendCredentials = true;
+      const alreadyDelivered = claim.data.welcomeEmailSent === true;
+      let preExisting = null;
+      try { preExisting = await adminAuth.getUserByEmail(email); } catch (e) { /* not found is expected */ }
+      if (!preExisting) {
+        password = generatePassword();
+        try {
+          userRecord = await adminAuth.createUser({ email, password, emailVerified: false });
+        } catch (e) {
+          // The claim transaction excludes our own duplicates, so a
+          // collision here is always external: never adopt it.
+          if (e.code === 'auth/email-already-exists') {
+            await docRef.update({ status: 'error', error: 'Email already has an account', processedAt: new Date() });
+            return htmlPage('<p style="font-size:15px;color:#0a1628">An account for <strong>' + escapeHtml(email) + '</strong> already exists. No new account was created &mdash; please handle this one manually.</p>', 409);
+          }
+          throw e;
+        }
+        // Link the account to this grant BEFORE any other step, so every
+        // later interruption state is provably recoverable. Unrelated claims
+        // are preserved; this endpoint only controls clientSlug (mirrors
+        // POST /api/portal-users).
+        await adminAuth.setCustomUserClaims(userRecord.uid, {
+          ...(userRecord.customClaims || {}),
+          clientSlug: cruiseLine,
+          portalGrantId: claim.grantId,
+        });
+        await docRef.update({ uid: userRecord.uid });
+      } else {
+        const fresh = (await docRef.get()).data() || {};
+        const ours =
+          (preExisting.customClaims && preExisting.customClaims.portalGrantId === claim.grantId) ||
+          (fresh.uid && fresh.uid === preExisting.uid);
+        if (!ours) {
+          await docRef.update({ status: 'error', error: 'Email already has an account', processedAt: new Date() });
+          return htmlPage('<p style="font-size:15px;color:#0a1628">An account for <strong>' + escapeHtml(email) + '</strong> already exists. No new account was created &mdash; please handle this one manually.</p>', 409);
+        }
+        // Recovery of our own interrupted attempt.
+        userRecord = preExisting;
+        if (alreadyDelivered || fresh.welcomeEmailSent === true) {
+          // Credentials were already delivered: keep them valid, send nothing.
+          sendCredentials = false;
+        } else {
+          // The interrupted attempt's password was never persisted and is
+          // unrecoverable by design: issue a fresh one.
+          password = generatePassword();
+          await adminAuth.updateUser(userRecord.uid, { password });
+        }
+        await adminAuth.setCustomUserClaims(userRecord.uid, {
+          ...(userRecord.customClaims || {}),
+          clientSlug: cruiseLine,
+          portalGrantId: claim.grantId,
+        });
+        if (!fresh.uid) await docRef.update({ uid: userRecord.uid });
       }
 
-      const password = generatePassword();
-      const userRecord = await adminAuth.createUser({ email, password, emailVerified: false });
-      // clientSlug lives on the ID token as a custom claim so Firestore
-      // rules can scope this user's reads (see firestore.rules); the
-      // portalUsers doc below is kept too, for the admin UI listing.
-      // Preserve unrelated claims; this endpoint only controls clientSlug
-      // (mirrors POST /api/portal-users). For the freshly created user above
-      // the spread is a no-op, so the result is { clientSlug } as before.
-      await adminAuth.setCustomUserClaims(userRecord.uid, { ...(userRecord.customClaims || {}), clientSlug: cruiseLine });
-
+      // Idempotent completion steps: safe to re-run on recovery.
       const clientDoc = adminDb.collection('clients').doc(cruiseLine);
       const clientSnap = await clientDoc.get();
       if (!clientSnap.exists) {
-        await clientDoc.set({ name: cruiseLineLabel, slug: cruiseLine, createdAt: new Date() });
+        await clientDoc.set({ name: cruiseLineLabel, slug: cruiseLine, active: true, createdAt: new Date() });
       }
 
       await adminDb.collection('portalUsers').doc(userRecord.uid).set({
         email, clientSlug: cruiseLine, createdAt: new Date(), company,
       });
 
-      await docRef.update({ status: 'completed', processedAt: new Date(), uid: userRecord.uid });
-
-      let welcomeEmailSent = true;
-      try {
+      // Welcome email: sent at most once per valid credential set. A prior
+      // attempt that already delivered keeps the delivered password valid and
+      // sends nothing here; every send pairs with the password set above, so
+      // at most one delivered credential set is ever valid.
+      let welcomeEmailSent = !sendCredentials;
+      if (sendCredentials) try {
         await sendEmail({
           to: email,
           subject: 'Your Selective Crew Pipeline Portal Access',
-          html: elegantEmail('\u{1F511}', 'Selective Crew', 'Pipeline Portal Access', welcomeEmailBody({ name, cruiseLineLabel, portalUrl, email, password })),
+          html: elegantEmail('🔑', 'Selective Crew', 'Pipeline Portal Access', welcomeEmailBody({ name, cruiseLineLabel, portalUrl, email, password })),
         });
+        welcomeEmailSent = true;
+        await docRef.update({ welcomeEmailSent: true });
       } catch (e) {
         welcomeEmailSent = false;
         console.error('Failed to send welcome email:', e);
@@ -209,10 +333,18 @@ export async function POST(request) {
         await docRef.update({ welcomeEmailSent: false });
       }
 
-      // Provisioning above succeeded; only email delivery failed. Never claim
-      // the email was sent in that case. The approver can re-issue
-      // credentials via Admin > Client Management > Send Invite once email
-      // delivery is working, so no password needs to appear on this page.
+      // The grant marker served its purpose (crash recovery above); strip it
+      // so production claims stay minimal, then mark the request completed.
+      const liveClaims = { ...((await adminAuth.getUser(userRecord.uid)).customClaims || {}) };
+      delete liveClaims.portalGrantId;
+      liveClaims.clientSlug = cruiseLine;
+      await adminAuth.setCustomUserClaims(userRecord.uid, liveClaims);
+      await docRef.update({ status: 'completed', processedAt: new Date(), uid: userRecord.uid });
+
+      // Provisioning above succeeded; only email delivery may have failed.
+      // Never claim the email was sent in that case. The approver can
+      // re-issue credentials via Admin > Client Management > Send Invite once
+      // email delivery is working, so no password needs to appear on this page.
       if (!welcomeEmailSent) {
         return htmlPage(
           '<div style="font-size:40px;margin-bottom:12px">⚠️</div>' +
@@ -268,6 +400,7 @@ export async function POST(request) {
       positions, message,
       status: 'pending',
       approveToken,
+      expiresAt: new Date(Date.now() + APPROVAL_LINK_TTL_MS),
       createdAt: new Date(),
     });
 
@@ -277,7 +410,7 @@ export async function POST(request) {
     await sendEmail({
       to: NOTIFY_EMAIL,
       subject: 'Portal Access Request - ' + company,
-      html: elegantEmail('\u{1F511}', 'Portal Access Request', escapeHtml(company), notifyEmailBody({
+      html: elegantEmail('🔑', 'Portal Access Request', escapeHtml(company), notifyEmailBody({
         name, company, email, cruiseLineLabel: CRUISE_LINES[cruiseLine], portalUrl, confirmUrl,
       })),
     });
@@ -285,7 +418,8 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('request-portal-access POST error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to submit request' }, { status: 500 });
+    // Public endpoint: never expose internal error details.
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }
 
@@ -308,6 +442,11 @@ export async function GET(request) {
     if (data.approveToken !== token) return htmlPage('<p style="font-size:15px;color:#0a1628">Invalid approval link.</p>', 403);
     if (data.status !== 'pending') {
       return htmlPage('<p style="font-size:15px;color:#0a1628">This request has already been processed (status: ' + escapeHtml(data.status) + ').</p>', 200);
+    }
+    // Read-only expiry enforcement: expired links render an explanatory page
+    // and are never approved. No writes here (scanner-safe by design).
+    if (isExpiredData(data)) {
+      return htmlPage('<p style="font-size:15px;color:#0a1628">' + APPROVAL_EXPIRED_TEXT + '</p>', 200);
     }
 
     const name = escapeHtml(data.name);
@@ -332,6 +471,7 @@ export async function GET(request) {
     return htmlPage(bodyHtml, 200);
   } catch (err) {
     console.error('request-portal-access GET error:', err);
-    return htmlPage('<p style="font-size:15px;color:#0a1628">Something went wrong: ' + escapeHtml(err.message || '') + '</p>', 500);
+    // Public endpoint: never expose internal error details.
+    return htmlPage('<p style="font-size:15px;color:#0a1628">Something went wrong. Please try again later.</p>', 500);
   }
 }

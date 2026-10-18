@@ -8,12 +8,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PUBLIC_RECIPIENTS = new Set(['careers@selectivecrew.com', 'staffing@selectivecrew.com']);
 
 export async function POST(request) {
+  let isAdmin = false;
   try {
     const body = await request.json();
     const admin = await requireAdmin(request);
     const hasBearer = Boolean(request.headers.get('authorization'));
     if (admin.error && hasBearer) return NextResponse.json({ error: admin.error }, { status: admin.status });
-    const isAdmin = !admin.error;
+    isAdmin = !admin.error;
     
     // Safely extract fields - handle missing or undefined values
     let to = body?.to || null;
@@ -156,8 +157,8 @@ export async function POST(request) {
     if (!res.ok) {
       console.error("Resend API Error:", data);
       return NextResponse.json(
-        { error: data.message || "Failed to send email" }, 
-        { status: res.status }
+        { error: isAdmin ? (data.message || "Failed to send email") : "Unable to send email" },
+        { status: isAdmin ? res.status : 502 }
       );
     }
     
@@ -166,7 +167,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Send email error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" }, 
+      { error: isAdmin ? (error.message || "Internal server error") : "Unable to send email" },
       { status: 500 }
     );
   }

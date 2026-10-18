@@ -226,6 +226,49 @@ export async function adminAuthHeader() {
   return { Authorization: `Bearer ${cachedAdminToken}` };
 }
 
+// Test-only Firebase client session (separate from lib/firebase.js, which is
+// hardcoded to production and is never imported here). Used ONLY to exercise
+// Firestore security rules as a signed-in user. Modules load lazily so the
+// loader thread stays lean; the guard above always runs first regardless.
+let testClientModules = null;
+let testClientApp = null;
+export async function userClientSession(email, password) {
+  if (!testClientModules) {
+    const [appMod, authMod, fsMod] = await Promise.all([
+      import('firebase/app'),
+      import('firebase/auth'),
+      import('firebase/firestore'),
+    ]);
+    testClientModules = { appMod, authMod, fsMod };
+    testClientApp = appMod.initializeApp(
+      { apiKey: 'test-api-key', authDomain: 'test.invalid', projectId: TEST_PROJECT_ID },
+      'portal-rules-test'
+    );
+    const auth = authMod.getAuth(testClientApp);
+    authMod.connectAuthEmulator(auth, `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}`, { disableWarnings: true });
+    const [fsHost, fsPort] = String(process.env.FIRESTORE_EMULATOR_HOST).split(':');
+    fsMod.connectFirestoreEmulator(fsMod.getFirestore(testClientApp), fsHost, Number(fsPort));
+  }
+  const { authMod, fsMod } = testClientModules;
+  const auth = authMod.getAuth(testClientApp);
+  const cred = await authMod.signInWithEmailAndPassword(auth, email, password);
+  return { auth, db: fsMod.getFirestore(testClientApp), uid: cred.user.uid };
+}
+
+export async function adminClientSession() {
+  return userClientSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+}
+
+// Creates (or heals) a synthetic test client. Tracked for cleanup.
+export async function ensureTestClient(slug, active = true) {
+  const { db } = await admin();
+  await db.collection('clients').doc(slug).set(
+    { name: `Test ${slug}`, slug, active, createdAt: new Date() },
+    { merge: true }
+  );
+  trackDoc('clients', slug);
+}
+
 // Cleanup tracking: only uids and documents the tests registered here are
 // ever deleted, so cleanup cannot touch anything it did not create. The
 // supported workflow is `firebase emulators:exec`, which provides fresh

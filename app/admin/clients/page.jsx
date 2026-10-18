@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 import { isAdminAccount } from '../../../lib/adminAccess';
 
@@ -76,6 +76,7 @@ export default function ClientsAdminPage() {
   const [userError, setUserError] = useState('');
   const [userSuccess, setUserSuccess] = useState('');
   const [sendingInvite, setSendingInvite] = useState({});
+  const [clientBusy, setClientBusy] = useState({});
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -117,7 +118,7 @@ export default function ClientsAdminPage() {
     if (clients.some(c => c.id === slug)) { setClientError('A client with this slug already exists.'); return; }
     setAddingClient(true);
     try {
-      await setDoc(doc(db, 'clients', slug), { name, slug, color: newColor || navy, logo: '', createdAt: serverTimestamp() });
+      await setDoc(doc(db, 'clients', slug), { name, slug, color: newColor || navy, logo: '', active: true, createdAt: serverTimestamp() });
       setNewName(''); setNewSlug(''); setSlugTouched(false); setNewColor('#0a1628');
       await loadClients();
     } catch (err) {
@@ -126,16 +127,49 @@ export default function ClientsAdminPage() {
     setAddingClient(false);
   }
 
-  async function handleDeleteClient(client) {
-    const usersOnClient = portalUsers.filter(u => u.clientSlug === client.id);
-    const msg = usersOnClient.length
-      ? 'Delete "' + client.name + '"? ' + usersOnClient.length + ' portal user(s) are linked to this client and will lose access.'
-      : 'Delete "' + client.name + '"?';
+  async function handleDeactivateClient(client, deactivate) {
+    const action = deactivate ? 'deactivate' : 'reactivate';
+    const msg = deactivate
+      ? 'Deactivate "' + client.name + '"? Portal users lose access immediately and candidate assignments are revoked (restorable on reactivation).'
+      : 'Reactivate "' + client.name + '"? Candidate assignments are restored; portal users must be re-invited.';
     if (!window.confirm(msg)) return;
+    setClientBusy(prev => ({ ...prev, [client.id]: true }));
     try {
-      await deleteDoc(doc(db, 'clients', client.id));
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ action, slug: client.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update client');
+      if (deactivate) {
+        alert('Deactivated "' + client.name + '": ' + (data.usersRevoked || 0) + ' user(s) revoked, ' + (data.applicationsDetached || 0) + ' assignment(s) revoked.');
+      } else {
+        alert('Reactivated "' + client.name + '": ' + (data.applicationsRestored || 0) + ' assignment(s) restored. Portal users must be re-invited.');
+      }
+      await loadClients();
+      await loadPortalUsers();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+    setClientBusy(prev => ({ ...prev, [client.id]: false }));
+  }
+
+  async function handleDeleteClient(client) {
+    if (!window.confirm('Permanently delete "' + client.name + '"? This is refused while portal users or assignments still reference it.')) return;
+    setClientBusy(prev => ({ ...prev, [client.id]: true }));
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/clients?slug=' + encodeURIComponent(client.id), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete');
       await loadClients();
     } catch (err) { alert('Error: ' + err.message); }
+    setClientBusy(prev => ({ ...prev, [client.id]: false }));
   }
 
   async function handleAddPortalUser(e) {
@@ -156,7 +190,7 @@ export default function ClientsAdminPage() {
       const createdEmail = puEmail.trim();
       setUserSuccess(data.emailSent
         ? 'Portal user created for ' + createdEmail + '. Welcome email sent.'
-        : 'Portal user created for ' + createdEmail + ', but the welcome email failed to send. You can share their password directly.');
+        : 'Portal user created for ' + createdEmail + ', but the welcome email failed to send. Use Send Invite on their client to re-issue credentials once email delivery is working.');
       setPuEmail(''); setPuPassword('');
       await loadPortalUsers();
     } catch (err) {
@@ -189,7 +223,7 @@ export default function ClientsAdminPage() {
       if (data.emailSent) {
         alert('Invite sent to ' + trimmedEmail + '.');
       } else {
-        alert('Portal account created for ' + trimmedEmail + ', but the invite email failed to send' + (data.emailError ? (': ' + data.emailError) : '') + '. You can add them manually below and share their password directly.');
+        alert('Portal account created for ' + trimmedEmail + ', but the invite email failed to send' + (data.emailError ? (': ' + data.emailError) : '') + '. Use Send Invite again to re-issue credentials once email delivery is working.');
       }
       await loadPortalUsers();
     } catch (err) {
@@ -256,12 +290,18 @@ export default function ClientsAdminPage() {
                     <div>
                       <p style={{ fontSize: 14, fontWeight: 700, color: navy, margin: 0 }}>{c.name}</p>
                       <p style={{ fontSize: 11, color: '#888', margin: 0 }}>/portal/{c.id}</p>
+                      {c.active === false
+                        ? <p style={{ fontSize: 11, color: '#b45309', fontWeight: 700, margin: 0 }}>Deactivated</p>
+                        : <p style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, margin: 0 }}>Active</p>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 11, color: '#aaa' }}>{portalUsers.filter(u => u.clientSlug === c.id).length} portal user(s)</span>
                     <button onClick={() => handleSendInvite(c)} disabled={!!sendingInvite[c.id]} style={{ background: '#f0f7ff', color: ocean, border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{sendingInvite[c.id] ? 'Sending...' : 'Send Invite'}</button>
-                    <button onClick={() => handleDeleteClient(c)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+                    {c.active === false
+                      ? <button onClick={() => handleDeactivateClient(c, false)} disabled={!!clientBusy[c.id]} style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{clientBusy[c.id] ? 'Working...' : 'Reactivate'}</button>
+                      : <button onClick={() => handleDeactivateClient(c, true)} disabled={!!clientBusy[c.id]} style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{clientBusy[c.id] ? 'Working...' : 'Deactivate'}</button>}
+                    <button onClick={() => handleDeleteClient(c)} disabled={!!clientBusy[c.id]} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
                   </div>
                 </div>
               ))}
@@ -314,7 +354,7 @@ export default function ClientsAdminPage() {
               </div>
               <div style={{ flex: '1 1 160px' }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Password</label>
-                <input type="text" value={puPassword} onChange={e => setPuPassword(e.target.value)} placeholder="min 6 characters" style={{ width: '100%', padding: '9px 12px', border: '1px solid #e0e8f4', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
+                <input type="password" value={puPassword} autoComplete="new-password" onChange={e => setPuPassword(e.target.value)} placeholder="min 6 characters" style={{ width: '100%', padding: '9px 12px', border: '1px solid #e0e8f4', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
               </div>
               <div style={{ flex: '1 1 160px' }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Client</label>
