@@ -32,6 +32,7 @@ import {
   trackUser,
   trackDoc,
   cleanupTestData,
+  shutdownTestClient,
   ensureTestClient,
   userClientSession,
   adminClientSession,
@@ -92,7 +93,22 @@ before(async () => {
 });
 
 after(async () => {
-  await cleanupTestData();
+  // Data cleanup first (it needs live SDK clients), then client shutdown
+  // (it releases the handles keeping Node alive). Each runs even if the
+  // other throws; the first failure propagates and any further failure is
+  // logged, so no teardown error is ever swallowed.
+  let firstError = null;
+  const runStep = async (step) => {
+    try {
+      await step();
+    } catch (e) {
+      if (!firstError) firstError = e;
+      else console.error('portal test teardown also failed:', e);
+    }
+  };
+  await runStep(() => cleanupTestData());
+  await runStep(() => shutdownTestClient());
+  if (firstError) throw firstError;
 });
 
 describe('welcome-email failure reporting', () => {

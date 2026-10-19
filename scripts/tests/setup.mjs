@@ -232,6 +232,12 @@ export async function adminAuthHeader() {
 // loader thread stays lean; the guard above always runs first regardless.
 let testClientModules = null;
 let testClientApp = null;
+// Per-step completion for shutdownTestClient below. Only a fully completed
+// shutdown releases references; anything less stays retryable.
+const testClientShutdownSteps = { signedOut: false, terminated: false, deleted: false };
+function testClientShutdownComplete() {
+  return testClientShutdownSteps.signedOut && testClientShutdownSteps.terminated && testClientShutdownSteps.deleted;
+}
 export async function userClientSession(email, password) {
   if (!testClientModules) {
     const [appMod, authMod, fsMod] = await Promise.all([
@@ -244,6 +250,11 @@ export async function userClientSession(email, password) {
       { apiKey: 'test-api-key', authDomain: 'test.invalid', projectId: TEST_PROJECT_ID },
       'portal-rules-test'
     );
+    // Fresh app: reset shutdown tracking so this instance gets a full
+    // teardown even if a previous app was already shut down.
+    testClientShutdownSteps.signedOut = false;
+    testClientShutdownSteps.terminated = false;
+    testClientShutdownSteps.deleted = false;
     const auth = authMod.getAuth(testClientApp);
     authMod.connectAuthEmulator(auth, `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}`, { disableWarnings: true });
     const [fsHost, fsPort] = String(process.env.FIRESTORE_EMULATOR_HOST).split(':');
@@ -257,6 +268,80 @@ export async function userClientSession(email, password) {
 
 export async function adminClientSession() {
   return userClientSession(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+}
+
+// Idempotent shutdown for the lazily initialized test-only client app above.
+// Without this, the Auth emulator listener, Firestore gRPC channels, and
+// token-refresh timers keep the Node test process alive after the suite
+// finishes (the summary prints but the process never exits without Ctrl+C).
+// Safe to call more than once, and safe when the app was never initialized.
+// Step completion is tracked explicitly: a failed shutdown never marks
+// itself complete, so a later call retries exactly the unfinished steps
+// without repeating destructive operations that already succeeded.
+export async function shutdownTestClient() {
+  // Fully shut down before: repeat calls are a no-op.
+  if (testClientShutdownComplete()) return;
+  // App reference without SDK modules is unreachable by construction (both
+  // are assigned and released together); fail loudly rather than leak.
+  if (testClientApp && !testClientModules) {
+    throw new Error('test client shutdown: app reference without SDK modules; cannot release safely');
+  }
+  if (!testClientApp) {
+    // Never initialized (or initialization never completed): nothing holds
+    // resources. Deliberately NOT marked complete, so a later initialization
+    // is still shut down properly.
+    testClientModules = null;
+    return;
+  }
+  const { appMod, authMod, fsMod } = testClientModules;
+  const app = testClientApp;
+  const failures = [];
+  // Each step runs at most once per app; completed steps are skipped, so a
+  // retry never repeats a destructive operation that already succeeded.
+  // Steps are attempted independently: one failure does not block the rest.
+  if (!testClientShutdownSteps.signedOut) {
+    try {
+      // Sign out: stops token-refresh timers and the Auth state listener.
+      await authMod.signOut(authMod.getAuth(app));
+      testClientShutdownSteps.signedOut = true;
+    } catch (e) {
+      failures.push(e);
+    }
+  }
+  if (!testClientShutdownSteps.terminated) {
+    try {
+      // Terminate Firestore: closes gRPC channels and persistence layers.
+      await fsMod.terminate(fsMod.getFirestore(app));
+      testClientShutdownSteps.terminated = true;
+    } catch (e) {
+      failures.push(e);
+    }
+  }
+  if (!testClientShutdownSteps.deleted) {
+    try {
+      // Delete the app: releases the container and any remaining handles.
+      await appMod.deleteApp(app);
+      testClientShutdownSteps.deleted = true;
+    } catch (e) {
+      failures.push(e);
+    }
+  }
+  if (failures.length > 0) {
+    // Never hide cleanup failures, and never mark an incomplete shutdown
+    // complete: references stay intact so a later call retries exactly the
+    // unfinished steps. The caller reports these alongside any data-cleanup
+    // error, so a broken teardown cannot masquerade as a green run.
+    const combined = new Error(
+      `test client shutdown failed (${failures.length} step(s)): ` +
+      failures.map((e) => (e && e.message) || String(e)).join('; ')
+    );
+    combined.cause = failures;
+    throw combined;
+  }
+  // All steps complete: release references (repeat calls no-op via the
+  // completion check above).
+  testClientModules = null;
+  testClientApp = null;
 }
 
 // Creates (or heals) a synthetic test client. Tracked for cleanup.
