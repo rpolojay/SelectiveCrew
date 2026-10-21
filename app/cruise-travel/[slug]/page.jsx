@@ -6,7 +6,7 @@ const articles = {
     title: 'Your First Cruise: A Practical Planning Guide',
     description: 'A clear introduction to planning your first cruise, from choosing an itinerary and cabin to embarkation day and budgeting.',
     category: 'START HERE',
-    minutes: '8 min read',
+    minutes: '12 min read',
     hero: 'light',
     image: '/images/cruise-travel/first-time-cruise-interior.jpg',
     imageAlt: 'Elegant cruise ship atrium with a grand illuminated glass staircase and crystal chandelier',
@@ -127,11 +127,207 @@ export default async function CruiseTravelArticlePage({ params }) {
           </section>
         ))}
 
+        {slug === 'first-time-cruise-guide' && (
+          <section style={{ marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 500, fontSize: 27, lineHeight: 1.3, margin: '0 0 12px' }}>Compare Destinations: Caribbean, Alaska, Mediterranean, and Northern Europe</h2>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>The destination shapes everything else — season, budget, excursions, and daily pace. Use these general profiles to shortlist an itinerary style that matches your interests, then compare specific sailings within it.</p>
+            <div style={{ overflowX: 'auto', margin: '0 0 14px' }}>
+              <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
+                <caption style={{ textAlign: 'left', color: '#10253d', fontSize: 14, fontWeight: 700, padding: '0 0 8px' }}>Destination profiles for first-time cruisers</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Destination</th>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>What to know</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Caribbean</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>Best suited to travelers interested in warm-weather destinations, beaches, island culture, and water activities.</li><li>Islands and ports differ widely — compare actual ports and port times rather than assuming every island offers the same experience. Our <Link href="/cruise-travel/best-caribbean-cruise-destinations" style={{ color: '#087f8c', fontWeight: 700, textDecoration: 'underline' }}>Caribbean destination guide</Link> compares ports in more detail.</li><li>Check the sailing season, port schedule, and excursion costs.</li></ul></td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Alaska</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>Best suited to travelers interested in dramatic scenery, wildlife, glaciers, and nature-focused excursions.</li><li>Itinerary, time ashore, and excursion availability shape the experience.</li><li>Seasonal sailing schedules and weather conditions matter — the season is short.</li></ul></td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Mediterranean</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>Best suited to travelers interested in historic cities, architecture, food, and cultural sightseeing.</li><li>Some itineraries are port-intensive and may involve transportation from the port to the main attractions.</li><li>Consider walking requirements, transport costs, and time available ashore.</li></ul></td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Northern Europe</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>Best suited to travelers interested in fjords, coastal scenery, historic cities, and cultural experiences.</li><li>Itineraries and daylight conditions vary by season and destination.</li><li>Check port schedules, weather, and excursion logistics.</li></ul></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>These are general destination profiles to guide your shortlist, not guarantees of a particular experience — individual itineraries vary widely within each region.</p>
+            <h3 style={{ color: '#4f5f6e', fontSize: 16, fontWeight: 700, lineHeight: 1.9, margin: '0 0 8px' }}>Match your priorities to a destination:</h3>
+            <ul style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px', paddingLeft: 22 }}>
+              <li><strong>Warm weather and beach time?</strong> Start with Caribbean itineraries and compare ports, seasons, and excursion costs.</li>
+              <li><strong>Glaciers, wildlife, and dramatic scenery?</strong> Consider Alaska and weigh time ashore against excursion availability.</li>
+              <li><strong>Historic cities, food, and culture?</strong> Look at the Mediterranean and check walking demands and port-to-city transfers.</li>
+              <li><strong>Fjords, coastal scenery, and northern cities?</strong> Explore Northern Europe and compare daylight, weather, and port schedules by season.</li>
+            </ul>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: 0 }}>Once you have a destination style in mind, see how a typical cruise week flows below, then compare cabin types and build your total trip budget.</p>
+          </section>
+        )}
+
+        {slug === 'first-time-cruise-guide' && (
+          <section style={{ marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 500, fontSize: 27, lineHeight: 1.3, margin: '0 0 12px' }}>What Does a 7-Night Cruise Itinerary Look Like?</h2>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>Below is one illustrative example of how a seven-night cruise week can be structured — an embarkation day, a mix of port visits and sea days, and a disembarkation day. It shows a pattern, not a real sailing schedule.</p>
+            <div style={{ overflowX: 'auto', margin: '0 0 14px' }}>
+              <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
+                <caption style={{ textAlign: 'left', color: '#10253d', fontSize: 14, fontWeight: 700, padding: '0 0 8px' }}>Illustrative day-by-day pattern for a 7-night cruise</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Day</th>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>What happens</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 1 — Embarkation</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Arrive at the departure port with sufficient time, complete check-in, board, and attend required safety procedures.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 2 — At sea</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Explore the ship, review dining and activity options, and learn how onboard spending works.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 3 — Port visit</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Explore a destination independently or choose an optional shore excursion.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 4 — Port visit</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Experience another destination, allowing time for transportation and return-to-ship requirements.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 5 — At sea</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Enjoy onboard activities or rest; review the next port schedule.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 6 — Port visit</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Explore local attractions, keeping the ship’s all-aboard time in mind.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 7 — Final full day</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Enjoy the scheduled itinerary, review onboard charges, and follow the cruise line’s disembarkation instructions.</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Day 8 — Disembarkation</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Leave the ship according to the assigned procedure and allow adequate time before onward transportation.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>Actual cruise lengths, port sequences, sea days, departure times, and arrival times vary by ship, itinerary, and cruise line. Some seven-night cruises have more or fewer port calls or a different arrangement of sea days.</p>
+            <h3 style={{ color: '#4f5f6e', fontSize: 16, fontWeight: 700, lineHeight: 1.9, margin: '0 0 8px' }}>Practical planning tips:</h3>
+            <ul style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px', paddingLeft: 22 }}>
+              <li>Check the official itinerary and all-aboard times for each port.</li>
+              <li>Allow sufficient time for transportation between the port and attractions.</li>
+              <li>Confirm whether excursions are included or cost extra.</li>
+              <li>Keep travel documents and essential items accessible.</li>
+              <li>Review the cruise line’s embarkation and disembarkation instructions.</li>
+              <li>Avoid scheduling flights too close to the expected arrival or departure procedures; verify the cruise line’s specific guidance for your sailing.</li>
+            </ul>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: 0 }}>With a picture of the week in mind, compare cabin types below to choose where you will sleep, then build your total trip budget.</p>
+          </section>
+        )}
+
+        {slug === 'first-time-cruise-guide' && (
+          <section style={{ marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 500, fontSize: 27, lineHeight: 1.3, margin: '0 0 12px' }}>Compare Cabin Types: Inside, Ocean-View, and Balcony</h2>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>The cabin sets your price baseline and your daily experience at sea. Use this side-by-side comparison to weigh price, natural light, outdoor space, privacy, and how you plan to spend your time.</p>
+            <div style={{ overflowX: 'auto', margin: '0 0 14px' }}>
+              <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
+                <caption style={{ textAlign: 'left', color: '#10253d', fontSize: 14, fontWeight: 700, padding: '0 0 8px' }}>Cabin trade-offs at a glance</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Cabin category</th>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Key trade-offs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Inside cabin</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>No private exterior window.</li><li>Usually the most economical cabin category, although actual prices vary by sailing.</li><li>Suitable for travelers prioritizing budget and time spent exploring the ship and destinations.</li></ul></td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Ocean-view cabin</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>A window or porthole providing natural light and an exterior view; the window generally does not open.</li><li>A possible middle ground for travelers who want daylight without paying for a balcony.</li></ul></td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Balcony cabin</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}><ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}><li>A private outdoor balcony, where specified by the cabin category, with outdoor space and views from the cabin.</li><li>Usually costs more than comparable inside cabins, but price differences vary by ship, itinerary, and sailing date.</li><li>Balcony space, privacy, views, and accessibility vary by cabin location and ship design.</li></ul></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>Not every ship offers all three categories, and the usual price order is not guaranteed on every sailing. Always compare the specific cabin types available on your ship and sailing date before deciding.</p>
+            <h3 style={{ color: '#4f5f6e', fontSize: 16, fontWeight: 700, lineHeight: 1.9, margin: '0 0 8px' }}>A concise decision guide:</h3>
+            <ul style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px', paddingLeft: 22 }}>
+              <li><strong>Choose inside</strong> if keeping costs down is the priority and you expect to spend little time in the cabin.</li>
+              <li><strong>Choose ocean-view</strong> if natural light matters but a private outdoor area is not essential.</li>
+              <li><strong>Choose balcony</strong> if private outdoor space and in-cabin views are worth the premium to you, and the specific balcony size, privacy, and location suit your needs.</li>
+            </ul>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: 0 }}>Once you have a cabin type in mind, use the cost breakdown below to see how it fits your total trip budget.</p>
+          </section>
+        )}
+
+        {slug === 'first-time-cruise-guide' && (
+          <section style={{ marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 500, fontSize: 27, lineHeight: 1.3, margin: '0 0 12px' }}>What Does a 7-Night Cruise Really Cost?</h2>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>The advertised fare is rarely the final number. Use the categories below to build a realistic total before you compare sailings, and confirm each line against the fare terms you are actually offered.</p>
+            <div style={{ overflowX: 'auto', margin: '0 0 14px' }}>
+              <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
+                <caption style={{ textAlign: 'left', color: '#10253d', fontSize: 14, fontWeight: 700, padding: '0 0 8px' }}>Common cost categories to review before booking</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Cost category</th>
+                    <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>What to consider</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Cruise fare</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Advertised fare and what it includes</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Taxes and port fees</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Check whether these are included in the displayed price</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Gratuities</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Daily service charges and whether they are prepaid</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Drinks and dining</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Optional packages and specialty restaurants</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Flights and transfers</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Travel to the departure port and transportation</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Pre-cruise hotel</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Optional overnight accommodation before embarkation</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Shore excursions</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Cruise-line excursions or independent activities</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Onboard spending</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Wi-Fi, shopping, spa, and other optional purchases</td></tr>
+                  <tr><th scope="row" style={{ color: '#263e54', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Travel insurance</th><td style={{ color: '#4f5f6e', fontSize: 14, padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Coverage, exclusions, and cancellation protection</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px' }}>Inclusions and mandatory charges vary by cruise line, itinerary, fare type, and booking terms. Some fares bundle gratuities, drinks, or Wi-Fi, while others price each item separately — so compare equivalent inclusions rather than headline fares alone.</p>
+            <div style={{ border: '1px solid #e4e9e7', borderRadius: 4, background: '#f7faf9', padding: '20px 22px', margin: '0 0 14px' }}>
+              <h3 style={{ fontFamily: 'Georgia, serif', color: '#10253d', fontSize: 19, fontWeight: 500, margin: '0 0 8px' }}>Illustrative example: one traveler, 7-night cruise</h3>
+              <p style={{ color: '#4f5f6e', fontSize: 14, lineHeight: 1.8, margin: '0 0 12px' }}>Assumptions: one traveler sharing an interior cabin priced per person on a double-occupancy basis; a 7-night sailing in shoulder season; flying to the departure port with one pre-cruise hotel night; no beverage package; two mid-range shore excursions; and a basic travel insurance policy. Every amount below is a hypothetical figure chosen for illustration.</p>
+              <div style={{ overflowX: 'auto', margin: '0 0 12px' }}>
+                <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
+                  <caption style={{ textAlign: 'left', color: '#637382', fontSize: 12, padding: '0 0 8px' }}>Hypothetical figures only — not quotes, averages, or guaranteed costs</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Item</th>
+                      <th scope="col" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'right', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Example amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Cruise fare, per person</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$750</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Taxes and port fees</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$145</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Gratuities, 7 nights at about $16 per night</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$112</td></tr>
+                    <tr><th scope="row" style={{ color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Cruise-related subtotal</th><td style={{ color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$1,007</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Round-trip flight to the departure port</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$380</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Airport and port transfers</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$60</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Pre-cruise hotel, one night</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$130</td></tr>
+                    <tr><th scope="row" style={{ color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Travel subtotal</th><td style={{ color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$570</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Shore excursions, two mid-range outings</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$220</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Onboard spending, Wi-Fi and incidentals</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$90</td></tr>
+                    <tr><th scope="row" style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 400, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Travel insurance, basic policy</th><td style={{ color: '#4f5f6e', fontSize: 14, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$85</td></tr>
+                    <tr><th scope="row" style={{ color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Optional spending subtotal</th><td style={{ color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'right', padding: '8px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$395</td></tr>
+                    <tr><th scope="row" style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'left', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>Estimated trip total (example)</th><td style={{ background: '#eef5f3', color: '#10253d', fontSize: 14, fontWeight: 700, textAlign: 'right', padding: '10px 12px', border: '1px solid #e4e9e7', verticalAlign: 'top' }}>$1,972</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ color: '#4f5f6e', fontSize: 14, lineHeight: 1.8, margin: '0 0 12px' }}>Adding the three groups gives $1,007 + $570 + $395 = $1,972 for this hypothetical traveler — roughly two and a half times the advertised $750 fare.</p>
+              <p style={{ color: '#637382', fontSize: 12, lineHeight: 1.8, margin: 0 }}>Cabin occupancy, departure port, destination, season, and travel dates can materially change the total; solo travelers, for example, are often charged a single supplement. Treat this as a budgeting method, not a live price, industry average, or guaranteed cost.</p>
+            </div>
+            <h3 style={{ color: '#4f5f6e', fontSize: 16, fontWeight: 700, lineHeight: 1.9, margin: '0 0 8px' }}>Before you book, answer these five budget questions:</h3>
+            <ul style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 14px', paddingLeft: 22 }}>
+              <li>What is included in the advertised fare?</li>
+              <li>Are taxes, port fees, and gratuities included?</li>
+              <li>Which drinks, meals, and Wi-Fi services cost extra?</li>
+              <li>What are the cancellation and change policies?</li>
+              <li>What additional travel costs will be required?</li>
+            </ul>
+            <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: 0 }}>With written answers to each question, use the comparison checklist below to weigh your shortlisted sailings against each other.</p>
+          </section>
+        )}
+
         <aside style={{ background: '#eef5f3', borderLeft: '4px solid #087f8c', borderRadius: 4, padding: '22px 24px', margin: '36px 0' }}>
-          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 500, margin: '0 0 8px' }}>Booking partner links</h2>
+          {slug === 'first-time-cruise-guide' ? (
+            <>
+              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 500, margin: '0 0 8px' }}>Compare Cruise Options With Confidence</h2>
+              <p style={{ color: '#4f5f6e', fontSize: 14, lineHeight: 1.8, margin: '0 0 12px' }}>Before you book, <Link href="/cruise-travel/how-to-choose-a-cruise-line" style={{ color: '#087f8c', fontWeight: 700, textDecoration: 'underline' }}>compare options</Link> on total value rather than the headline fare alone. Consider the total trip cost, the itinerary and port times, the cabin category and location, dining inclusions, gratuities, cancellation terms, transportation to and from the port, and the additional expenses you are likely to incur onboard and ashore.</p>
+              <h3 style={{ color: '#4f5f6e', fontSize: 14, fontWeight: 700, lineHeight: 1.8, margin: '0 0 8px' }}>Final check before you pay or commit:</h3>
+              <ul style={{ color: '#4f5f6e', fontSize: 14, lineHeight: 1.8, margin: '0 0 12px', paddingLeft: 20 }}>
+                <li>What is the total price, including taxes, port fees, and gratuities?</li>
+                <li>What exactly does the fare include — dining venues, drinks, Wi-Fi, entertainment, and room service?</li>
+                <li>What are the payment schedule, cancellation terms, and refund conditions?</li>
+                <li>Which cabin category and location am I booking, and could it change?</li>
+                <li>How will I travel to and from the departure port, and what will that add to the budget?</li>
+                <li>What additional onboard and onshore spending should I realistically expect?</li>
+              </ul>
+              <p style={{ color: '#637382', fontSize: 12, lineHeight: 1.8, margin: 0 }}>Affiliate links are always clearly identified when they appear. No booking recommendation or affiliate link is currently offered in this section.</p>
+            </>
+          ) : (
+            <>
+              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 500, margin: '0 0 8px' }}>Booking partner links</h2>
           <p style={{ color: '#4f5f6e', fontSize: 14, lineHeight: 1.8, margin: 0 }}>Affiliate booking links may be added here after a partnership is approved. No affiliate link is active in this guide at this time.</p>
-          <p style={{ color: '#637382', fontSize: 11, margin: '12px 0 0' }}>[AFFILIATE LINK PLACEHOLDER — DO NOT PUBLISH A BOOKING URL UNTIL APPROVED]</p>
+            </>
+          )}
         </aside>
+
+        {slug === 'first-time-cruise-guide' && (
+          <p style={{ color: '#4f5f6e', fontSize: 16, lineHeight: 1.9, margin: '0 0 28px' }}>You now have a complete planning path: shortlist a destination style, picture your cruise week, choose a cabin type, estimate the full trip cost, and run the final checklist before you pay. Work through each step with written answers, and compare specific sailings on equal terms before committing.</p>
+        )}
 
         <div style={{ borderTop: '1px solid #e4e9e7', paddingTop: 24, display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <Link href="/cruise-travel" style={{ color: '#087f8c', fontSize: 14, fontWeight: 800, textDecoration: 'none' }}>← ALL CRUISE TRAVEL GUIDES</Link>
