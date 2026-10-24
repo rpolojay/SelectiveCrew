@@ -315,7 +315,48 @@ export default async function CruiseTravelArticlePage({ params }) {
                 <li>How will I travel to and from the departure port, and what will that add to the budget?</li>
                 <li>What additional onboard and onshore spending should I realistically expect?</li>
               </ul>
-              <p style={{ color: '#637382', fontSize: 12, lineHeight: 1.8, margin: 0 }}>Affiliate links are always clearly identified when they appear. No booking recommendation or affiliate link is currently offered in this section.</p>
+              <p style={{ color: '#637382', fontSize: 12, lineHeight: 1.8, margin: '0 0 16px' }}>
+                <strong>Affiliate Disclosure:</strong> SelectiveCrew may earn a commission if you book a cruise through this link, at no additional cost to you.
+              </p>
+              <div style={{ margin: '0 0 20px' }}>
+                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 500, lineHeight: 1.35, margin: '0 0 12px' }}>
+                  Ready to Plan Your Next Cruise?
+                </h3>
+                <a
+                  href="https://www.kqzyfj.com/click-101909216-15734200"
+                  target="_blank"
+                  rel="sponsored nofollow noopener noreferrer"
+                  aria-label="Explore CruiseDirect cruise deals"
+                  style={{ display: 'block', marginBottom: 12 }}
+                >
+                  <img
+                    src="/images/cruise-travel/cruise-line-ship-aerial.jpg"
+                    alt="Aerial view of a cruise ship sailing at sea"
+                    loading="lazy"
+                    style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 6 }}
+                  />
+                </a>
+                <p style={{ color: '#4f5f6e', fontSize: 14, lineHeight: 1.8, margin: '0 0 14px' }}>
+                  Explore cruise options and discover available deals with CruiseDirect.
+                </p>
+              </div>
+              <a
+                href="https://www.kqzyfj.com/click-101909216-15734200"
+                target="_blank"
+                rel="sponsored nofollow noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  background: '#087f8c',
+                  color: '#fff',
+                  borderRadius: 4,
+                  padding: '13px 18px',
+                  textDecoration: 'none',
+                  fontSize: 14,
+                  fontWeight: 800,
+                }}
+              >
+                Browse CruiseDirect Cruise Deals
+              </a>
             </>
           ) : (
             <>
